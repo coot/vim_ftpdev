@@ -22,8 +22,11 @@ function! Goto(what,bang,...)
     let error = 0
     try
 	exe 'vimgrep /'.pattern.'/' . grep_flag . ' ' . filename
-    catch /E480: No match:/
-	echoerr 'E480: No match: ' . pattern
+    catch /E480:/
+	redraw
+	echohl ErrorMsg
+	echo 'E480: No match: ' . pattern
+	echohl None
 	let error = 1
     endtry
     if !error
