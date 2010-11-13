@@ -1,8 +1,8 @@
-PLUGIN 	= VIMVIM
+PLUGIN 	= FTPDEV
 VERSION = 1
 
-SOURCE = ftplugin/vim_vim.vim
-SOURCE += doc/vimvim.txt
+SOURCE = ftplugin/vim_ftpdev.vim
+SOURCE += doc/ftpdev.txt
 
 ${Plugin}_${VERSION}.vba: ${SOURCE}
 		tar -czf ${PLUGIN}${VERSION}.tar.gz ${SOURCE}

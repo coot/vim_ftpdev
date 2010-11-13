@@ -1,6 +1,6 @@
-*vimvim.txt* 			For Vim version 7	Last change: 13 November 2010
+*ftpdev.txt* 			For Vim version 7	Last change: 13 November 2010
 
-			An Introduction to VIMVIM PLUGIN (ver 1)
+		    A help file for <F>ile <T>ype <P>lugin <DEV>elopemnt  (ver 1)
 				by Marcin Szamotulski
 			    mszamot [AT] gmail [DOT] com
 			----------------------------------------
@@ -75,20 +75,20 @@ COPY RIGHTS							*vimvim-copy-rights*
     and distribute this code, with or without modifications, provided that
     this copyright notice is copied with it. 
 
-    VIMVIM filetype plugin for Vim is free software: you can redistribute it
+    FTPDEV filetype plugin for Vim is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
     License, or (at your option) any later version.
  
-    VIMVIM filetype plugin for Vim is distributed in the hope that it will be
+    FTPDEV filetype plugin for Vim is distributed in the hope that it will be
     useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
     Public License for more details.
  
     You should have received a copy of the GNU General Public License along
-    with VIMVIM filetype plugin for Vim.  If not, see <http://www.gnu.org/licenses/>.
+    with FTPDEV filetype plugin for Vim.  If not, see <http://www.gnu.org/licenses/>.
 
-    This licence applies to all files shipped with VIMVIM filetype plugin.
+    This licence applies to all files shipped with FTPDEV filetype plugin.
 
 
 
