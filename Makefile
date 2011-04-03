@@ -1,5 +1,5 @@
 PLUGIN 	= FTPDEV
-VERSION = _1
+VERSION = _3
 
 SOURCE = ftplugin/vim_ftpdev.vim
 SOURCE += doc/ftpdev.txt
