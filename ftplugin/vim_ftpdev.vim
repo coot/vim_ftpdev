@@ -65,7 +65,7 @@ function! FuncCompl(A,B,C)
     let loclist = getloclist(0)
     call setloclist(0, saved_loclist)
     call map(loclist, 'get(v:val, "text", "")')  
-    call map(loclist, 'matchstr(v:val, ''^\s*fun\%[ction]!\=\s*\(<\csnr>\|\cs:\)\=\zs.*\ze\s*('')')
+    call map(loclist, 'matchstr(v:val, ''^\s*fun\%[ction]!\=\s*\(<\csid>\|\cs:\)\=\zs.*\ze\s*('')')
     return join(loclist, "\n")
 endfunction
 command! -buffer -bang -nargs=? -complete=command Command 	:call Goto('command', <q-bang>, <q-args>) 
