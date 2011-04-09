@@ -29,7 +29,7 @@ function! Goto(what,bang,...)
     if a:what == 'function'
 	let pattern		= '^\s*fu\%[nction]!\=\s\+\%(s:\|<\csid>\)\=' .  ( a:0 >=  1 ? a:1 : '' )
     elseif a:what == 'command'
-	let pattern		= '^\s*com\%[mand]!\=\s\+.*\s*' .  ( a:0 >=  1 ? a:1 : '' )
+	let pattern		= '^\s*com\%[mand]!\=\(\s*-buffer\s*\|\s*-nargs=[01*?+]\s*\|\s*-complete=\S\+\s*\|\s*-bang\s*\|\s*-range=\=[\d%]*\s*\|\s*-count=\d\+\s*\|\s*-bar\s*\|\s*-register\s*\)*\s*'.( a:0 >= 1 ? a:1 : '' )
     elseif a:what == 'variable'
 	let pattern 		= '^\s*let\s\+' . ( a:0 >=  1 ? a:1 : '' )
     elseif a:what == 'map'
@@ -43,7 +43,7 @@ function! Goto(what,bang,...)
 
     let error = 0
     try
-	exe 'vimgrep /'.pattern.'/' . grep_flag . ' ' . filename
+	exe 'silent! vimgrep /'.pattern.'/' . grep_flag . ' ' . filename
     catch /E480:/
 	echoerr 'E480: No match: ' . pattern
 	let error = 1
@@ -66,9 +66,21 @@ function! FuncCompl(A,B,C)
     call setloclist(0, saved_loclist)
     call map(loclist, 'get(v:val, "text", "")')  
     call map(loclist, 'matchstr(v:val, ''^\s*fun\%[ction]!\=\s*\(<\csid>\|\cs:\)\=\zs.*\ze\s*('')')
+    call map(loclist, 'v:val.''\>''')
     return join(loclist, "\n")
 endfunction
-command! -buffer -bang -nargs=? -complete=command Command 	:call Goto('command', <q-bang>, <q-args>) 
+function! CommandCompl(A,B,C)
+    let saved_loclist=getloclist(0)
+    let filename	= join(map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)"))
+    exe 'lvimgrep /^\s*com\%[mand]/gj '.filename
+    let loclist = getloclist(0)
+    call setloclist(0, saved_loclist)
+    call map(loclist, 'get(v:val, "text", "")')  
+    call map(loclist, 'matchstr(v:val, ''^\s*com\%[mand]!\=\(\s*-buffer\s*\|\s*-nargs=[01*?+]\s*\|\s*-complete=\S\+\s*\|\s*-bang\s*\|\s*-range=\=[\d%]*\s*\|\s*-count=\d\+\s*\|\s*-bar\s*\|\s*-register\s*\)*\s*\zs\w*\>\ze'')')
+    call map(loclist, 'v:val.''\>''')
+    return join(loclist, "\n")
+endfunction
+command! -buffer -bang -nargs=? -complete=custom,CommandCompl Command 	:call Goto('command', <q-bang>, <q-args>) 
 command! -buffer -bang -nargs=? -complete=var Variable 		:call Goto('variable', <q-bang>, <q-args>) 
 command! -buffer -bang -nargs=? -complete=mapping Map 		:call Goto('map', <q-bang>, <q-args>) 
 
