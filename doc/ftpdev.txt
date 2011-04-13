@@ -20,7 +20,7 @@ NEWS							*ftpdev-news*
 
  With command |ftpdev-:Function|, |ftpdev-:Command|, |ftpdev-:MapLhs|,
  |ftpdev-:MapRhs|  you can specify additional argument to which line of the
- function goto.
+ function goto. If there are more than one result they are printed.
 >
  version 3
 <

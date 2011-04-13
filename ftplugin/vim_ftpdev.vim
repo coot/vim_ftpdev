@@ -1,4 +1,5 @@
 " Title:  Vim filetype plugin file
+" :
 " Author: Marcin Szamotulski
 " Email:  mszamot [AT] gmail [DOT] com
 " Last Change:
@@ -25,22 +26,30 @@ if !exists("g:ftplugin_dir")
 endif
 try
 function! Goto(what,bang,...)
-    let g:arg 	= (a:0 >= 1 ? a:1 : 'no_arg')
+    let g:a	= (a:0 >= 1 ? a:1 : "")
+    let pattern = (a:0 >= 1 ? 
+		\ (a:1 =~ '.*\ze\s\+\d\+$' ? matchstr(a:1, '.*\ze\s\+\d\+$') : a:1)
+		\ : 'no_arg') 
+    let line	= (a:0 >= 1 ? 
+		\ (a:1 =~ '.*\ze\s\+\d\+$' ? matchstr(a:1, '.*\s\+\zs\d\+$') : 0) 
+		\ : 0)
+    	let g:pattern_arg 	= pattern
+	let g:line_arg		= line
     " Go to a:2 lines below
-    let line 	= (a:0 >= 2 ? a:2 : 0 )	
+    let g:line = line
     let grep_flag = ( a:bang == "!" ? 'j' : '' )
     if a:what == 'function'
-	let pattern		= '^\s*fu\%[nction]!\=\s\+\%(s:\|<\csid>\)\=' .  ( a:0 >=  1 ? a:1 : '' )
+	let pattern		= '^\s*fu\%[nction]!\=\s\+\%(s:\|<\csid>\)\=' .  ( a:0 >=  1 ? pattern : '' )
     elseif a:what == 'command'
-	let pattern		= '^\s*com\%[mand]!\=\%(\s*-buffer\s*\|\s*-nargs=[01*?+]\s*\|\s*-complete=\S\+\s*\|\s*-bang\s*\|\s*-range=\=[\d%]*\s*\|\s*-count=\d\+\s*\|\s*-bar\s*\|\s*-register\s*\)*\s*'.( a:0 >= 1 ? a:1 : '' )
+	let pattern		= '^\s*com\%[mand]!\=\%(\s*-buffer\s*\|\s*-nargs=[01*?+]\s*\|\s*-complete=\S\+\s*\|\s*-bang\s*\|\s*-range=\=[\d%]*\s*\|\s*-count=\d\+\s*\|\s*-bar\s*\|\s*-register\s*\)*\s*'.( a:0 >= 1 ? pattern : '' )
     elseif a:what == 'variable'
-	let pattern 		= '^\s*let\s\+' . ( a:0 >=  1 ? a:1 : '' )
+	let pattern 		= '^\s*let\s\+' . ( a:0 >=  1 ? pattern : '' )
     elseif a:what == 'maplhs'
-	let pattern		= '^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\=' . ( a:0 >= 1 ? a:1 : '' )
+	let pattern		= '^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\=' . ( a:0 >= 1 ? pattern : '' )
     elseif a:what == 'maprhs'
-	let pattern		= '^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>\s+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\s\+\<\S\+\>\s\+\%(<plug>\)\=' . ( a:0 >= 1 ? a:1 : '' )
+	let pattern		= '^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>\s+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\s\+\<\S\+\>\s\+\%(<plug>\)\=' . ( a:0 >= 1 ? pattern : '' )
     else
-	let pattern 		= '^\s*[ci]\=\%(\%(nore\|un\)a\%[bbrev]\|ab\%[breviate]\)' . ( a:0 >= 1 ? a:1 : '' )
+	let pattern 		= '^\s*[ci]\=\%(\%(nore\|un\)a\%[bbrev]\|ab\%[breviate]\)' . ( a:0 >= 1 ? pattern : '' )
     endif
     let g:pattern		= pattern
     let filename		= join(map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)"))
@@ -52,6 +61,10 @@ function! Goto(what,bang,...)
 	echoerr 'E480: No match: ' . pattern
 	let error = 1
     endtry
+
+    if len(getqflist()) >= 2
+	clist
+    endif
     if !error
 	exe 'silent! normal zO'
 	exe 'normal zt'
