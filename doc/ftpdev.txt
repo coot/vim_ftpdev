@@ -20,7 +20,9 @@ NEWS							*ftpdev-news*
 
  With command |ftpdev-:Function|, |ftpdev-:Command|, |ftpdev-:MapLhs|,
  |ftpdev-:MapRhs|  you can specify additional argument to which line of the
- function goto. If there are more than one result they are printed.
+ function goto. If there are more than one result they are printed. This is
+ particularly useful when debugging a script and you got an error in function
+ at a given line.
 >
  version 3
 <
