@@ -9,6 +9,7 @@ This file type plugin provides some additional functions and commands which
 help writing and vim plugins. Especially big ones. Here is the list of
 available commands and maps with some explanation:
 
+======
 NEWS							*ftpdev-news*	
 
 >
@@ -28,11 +29,6 @@ NEWS							*ftpdev-news*
  |++bin| and the ftpdev internals will not detect it while splitting the
  options ftpdev will return with an error (however this shall work fine - and
  was tested, it is just for safety reasons!).
-
- *g:ftplugin_ResetPath* is set to 1 it will set |path|=g:ftplugin_dir, if not
- set or equal 0 it will add g:ftplugin_dir to |path| (only if the path already
- does not contain it). 
- This makes the use of |edit|, |split|, |vsplit|, |diffsplit| a lot nicer.
 
 >
  version 4.1
@@ -75,21 +71,11 @@ nmap GN
  nmap	Gn	:call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]*\<\zsendif\>')<CR>
  nmap	GN	:call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]*\<\zsendif\>', 'b')<CR>
 <	
-	
->
- version 2
-<
-In the version 2 of thus plugin you get:
-    map gn
-    man gN
-	    maps to search in the current function for the last search pattern @/.
-	    They work like |n| and |N|.
 
-    The messages for this search are now visible.
+======
+CONFIGURATION						*ftpdev-configure* 
 
-    GetLatestVimScript support added.
-
-							|ftpdev-g:ftplugin_dir|
+							*ftpdev-g:ftplugin_dir*
 There is one variable which needs to be configured >
  g:ftplugin_dir
 < This is the directory which will be searched for files. If you set this to
@@ -97,9 +83,24 @@ your ~/.vim/ftplugin directory where you have lots of scripts this plugin
 might be a bit slow. Each plugin that I develop has its own directory (you
 probably use some version control system as I do) then this variable is set
 in my vimrc file via an autocommand: >
-	au BufEnter /some_directory/*.vim	let g:ftplugin=<value>
+	au BufEnter /plugin_dev_dir/*		let g:ftplugin=<plugin_dev_dir>
 <
+							*ftpdev-:PluginDir*
+:PluginDir {dir}	
+	This sets value of the variable |ftpdev-g:ftplugin_dir| to {dir}. It
+	has dir type completion.
 
+ 							*ftpdev-g:ftplugin_ResetPath*
+ |g:ftplugin_ResetPath| is set to 1 it will set |path|=g:ftplugin_dir, if not
+ set or equal 0 it will add g:ftplugin_dir to |path| (only if the path already
+ does not contain it). 
+ This makes the use of |edit|, |split|, |vsplit|, |diffsplit| a lot nicer.
+
+
+======
+COMMANDS AND MAPS					*ftpdev*
+
+SEARCHING COMMANDS ~
 :Function[!] {fname} [line]				*ftpdev-:Function*
 	This finds function with name matching {fname} vim pattern under the
 	|ftpdev-g:ftplugin_dir| directory. It uses the internal grep, i.e.
@@ -132,12 +133,12 @@ in my vimrc file via an autocommand: >
 	|ftpdev-:Function|
 	The [line] argument is the same as in |ftpdev-:Function|.
 
-:MapLhs[!] {maplhs} [line]					*ftpdev-:MapLhs*
+:MapLhs[!] {maplhs} [line]				*ftpdev-:MapLhs*
 	This finds maps which lhs matches {maplhs} vim pattern. The bang works as in
 	|ftpdev-:Function|
 	The [line] argument is the same as in |ftpdev-:Function|.
 
-:MapRhs[!] {maprhs} [line]					*ftpdev-:MapRhs*
+:MapRhs[!] {maprhs} [line]				*ftpdev-:MapRhs*
 	This finds maps which rhs matches {maprhs} vim pattern. The bang works as in
 	|ftpdev-:Function|
 	The [line] argument is the same as in |ftpdev-:Function|.
@@ -158,11 +159,6 @@ map gN
 	Note that you can first search with the vim standard |/| or |?| and
 	then use |ftpdev-gn| and |ftpdev-gN|.
 
-							*ftpdev-:PluginDir*
-:PluginDir {directory}	
-	This sets the variable |ftpdev-g:ftplugin_dir|. It has dir type
-	completion.
-
 							*ftpdev-:Pgrep*
 :Pgrep /{pattern}/[j][g]
 	This makes |vimgrep| in all files '*.vim' under |ftpdev-g:ftplugin_dir|.
@@ -176,6 +172,7 @@ Remember: Vim has its own vim.vim ftplugin which defines:
 	[] 	(previous end of a function).
 	
 
+EDITING A FILE ~
 :Edit [++opt] [+cmd] {file}				*ftpdev-:Edit*
 	Like |:edit| vim command. See |++opt| and |+cmd|. If |++bin| is given
 	and then forgot returns with an error (while this should not happen,
@@ -214,7 +211,7 @@ Remember: Vim has its own vim.vim ftplugin which defines:
 Happy vimming :)	
 
 ================================================================================
-COPY RIGHTS							*ftpdev-copy-rights*
+COPY RIGHTS						*ftpdev-copy-rights*
 
 
     Copyright (C) 2010 Marcin Szamotulski Permission is hereby granted to use
@@ -237,6 +234,4 @@ COPY RIGHTS							*ftpdev-copy-rights*
     This licence applies to all files shipped with FTPDEV filetype plugin.
 
 
-
-
- vim:tw=75:ts=8:ft=help:norl:
+vim:tw=75:ts=8:ft=help:norl:

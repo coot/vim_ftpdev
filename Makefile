@@ -7,9 +7,9 @@ SOURCE += doc/ftpdev.txt
 ${Plugin}_${VERSION}.vba: ${SOURCE}
 		tar -czf ${PLUGIN}${VERSION}.tar.gz ${SOURCE}
 		vim -nX --cmd 'let g:plugin_name = "${PLUGIN}${VERSION}"' -S build.vim -cq!
-
 install:
 		rsync -Rv ${SOURCE} ${HOME}/.vim/
+		vim --cmd :helptags\ ${HOME}/.vim/doc --cmd q!
 
 clean:		
 		rm ${PLUGIN}${VERSION}.vba ${PLUGIN}${VERSION}.tar.gz
