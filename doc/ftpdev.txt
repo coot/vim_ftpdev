@@ -1,4 +1,4 @@
-*ftpdev.txt* 			For Vim version 7	Last change: 23 April 2011
+*ftpdev.txt* 			For Vim version 7	Last change: 6 May 2011
 
 
 		    A help file for <F>ile <T>ype <P>lugin <DEV>elopemnt  (ver. 5.3)
