@@ -18,6 +18,9 @@ NEWS							*ftpdev-news*
  |ftpdev-:Function|, |ftpdev-:Command|, |ftpdev-:MapLhs|, |ftpdev-:MapRhs| and
  |ftpdev-:Variable| are using location list rather than the quick fix list.
  Use |:llist|, |:lne| and |:lp| vim commands.
+
+ |ftpdev-:S| command is works well when the pattern contains |\v| (but not
+ when it mixes |\m|, |\v|).
 >
  version 5.4
 <
