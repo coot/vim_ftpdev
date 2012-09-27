@@ -1,6 +1,8 @@
 " Title:  Vim filetype plugin file
 " Author: Marcin Szamotulski
 " Email:  mszamot [AT] gmail [DOT] com
+" License: vim-license, see ':help license'
+" Copyright: © Marcin Szamotulski, 2012
 " GetLatestVimScript: 3322 2 :AutoInstall: FTPDEV
 " Copyright Statement: {{{1
 " 	  This file is a part of Automatic Tex Plugin for Vim.
@@ -22,15 +24,42 @@
 
 
 "{{{1 GLOBAL VARIABLES
+let s:vim_dirs = [ "ftplugin", "plugin", "autoload", "compiler", "syntax",
+	\ "indent", "colors", "doc", "keymap", "lang", "macros", "print",
+	\ "spell", "tools", "tutor", ]
 if !exists("g:ftplugin_dir")
-    let g:ftplugin_dir	= globpath(split(&rtp, ',')[0], 'ftplugin') 
-    let g:ftplugin_dir  = ( g:ftplugin_dir == "" ) ? globpath(split(&rtp,',')[0],'plugin') : g:ftplugin_dir.','. globpath(split(&rtp,',')[0],'plugin')
+    let dir_path = ''
+    for dir in s:vim_dirs
+	let dir_path = fnamemodify(finddir(dir, expand("%:p:h").';'), ':p')
+	if !empty(dir_path)
+	    break
+	endif
+    endfor
+    if !empty(dir_path)
+	let g:ftplugin_dir = fnamemodify(dir_path, ':h:h')
+    else
+	let g:ftplugin_dir = expand("%:p:h")
+    endif
 endif
 if !exists("g:ftplugin_installdir")
-    let g:ftplugin_installdir=split(&runtimepath,",")[0]
+    exe 'lcd '.fnameescape(g:ftplugin_dir)
+    let file = globpath(&rtp, expand("%"))
+    lcd -
+    let dir_path = ''
+    for dir in s:vim_dirs
+	let dir_path = fnamemodify(finddir(dir, fnamemodify(file, ':h').';'), ':p')
+	if !empty(dir_path)
+	    break
+	endif
+    endfor
+    if !empty(dir)
+	let g:ftplugin_installdir = fnamemodify(dir_path, ':h:h')
+    else
+	let g:ftplugin_installdir = split(&rtp, ',')[0]
+    endif
 endif
 if !exists("g:ftplugin_notinstall")
-    let g:ftplugin_notinstall=['Makefile', '.*\.tar\.\%(bz2\|gz\)$', '.*\.vba$']
+    let g:ftplugin_notinstall=['Makefile', '\.tar\%(\.\%(bz2\|gz\)\)\?$', '\.vba$', '.*\.vmb$']
 endif
 if exists("g:ftplugin_ResetPath") && g:ftplugin_ResetPath == 1
     au! BufEnter *.vim exe "setl path=".substitute(g:ftplugin_dir.",".join(filter(split(globpath(g:ftplugin_dir, '**'), "\n"), "isdirectory(v:val)"), ","), " ", '\\\\\\\ ', 'g')
@@ -243,7 +272,7 @@ function! Search(Arg) "{{{1
     call SearchInFunction(pattern, flag)
 endfunction "}}}1
 command! -buffer -nargs=*	S 	:call Search(<q-args>) | let v:searchforward = ( <SID>GetSearchArgs(<q-args>, 'bcenpswW')[1] =~# 'b' ? 0 : 1 )
-" my vim doesn't distinguish <C-n> and <C-N>:
+
 nmap <silent> <buffer> <C-N>				:call SearchInFunction(@/,'')<CR>
 nmap <silent> <buffer> <C-P> 				:call SearchInFunction(@/,'b')<CR>
 nmap <silent> <buffer> gn 				:call SearchInFunction(@/,( v:searchforward ? '' : 'b'))<CR>
@@ -322,38 +351,40 @@ nmap	[#	:call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]
 
 function! <SID>Install(bang) "{{{1
 
-    let cwd = getcwd()
-    exe 'lcd '.g:ftplugin_dir
+    exe 'lcd '.fnameescape(g:ftplugin_dir)
     
     if a:bang == "" 
 	" Note: this returns non zero list if the buffer is loaded
 	" ':h getbufline()'
-	let file_name = fnamemodify(bufname(""), ":.")
-	let file		= getbufline( '%', '1', '$')
-	call writefile( file, $HOME . "/.vim/" . file_name)
+	let file_name = expand('%:.')
+	let file = getbufline('%', '1', '$')
+	let install_path = substitute(g:ftplugin_installdir, '\/\s*$', '', '').'/'.file_name
+	call writefile(file, install_path)
+	echom 'File installed to: "'.install_path.'".'
     else
-	for file in filter(split(globpath(g:ftplugin_dir, "**"), "\n"), "!isdirectory(v:val) && <SID>Index(g:ftplugin_notinstall, fnamemodify(v:val, ':.')) == -1")
-	    echo file
+	let install_path = substitute(g:ftplugin_installdir, '\/\s*$', '', '')
+	for file in filter(split(globpath(g:ftplugin_dir, '**'), "\n"), "!isdirectory(v:val) && <SID>Index(g:ftplugin_notinstall, fnamemodify(v:val, ':.')) == -1")
 	    if bufloaded(file)
-		let file_list		= getbufline( file, '1', '$')
+		let file_list = getbufline(file, '1', '$')
 	    else
-		let file_list		= readfile( file)
+		let file_list = readfile(file)
 	    endif
-	    let file_name = fnamemodify(file, ":.")
-	    call writefile(file_list, substitute(g:ftplugin_installdir, '\/$', '', '')."/".file_name)
+	    let file_name = fnamemodify(file, ':.')
+	    echo 'Installing: "'.file_name.'" to "'.install_path.'/'.file_name.'"'
+	    call writefile(file_list, install_path.'/'.file_name)
 	endfor
     endif
-    exe "lcd ".cwd
+    lcd -
 endfunction
 function! <SID>Index(list, pattern) "{{{2
     let ind = -1
     for element in a:list
 	let ind += 1
 	if element =~ a:pattern || element == a:pattern
-	    return ind
+	    break
 	endif
     endfor
-    return -1
+    return ind
 endfunction "}}}2
 command! -bang Install 	:call <SID>Install(<q-bang>)
 

@@ -1,7 +1,7 @@
-*ftpdev.txt* 			For Vim version 7	Last change: 6 May 2011
+*ftpdev.txt* 			For Vim version 7	Last change: 27 IX 2012
 
 
-		    A help file for <F>ile <T>ype <P>lugin <DEV>elopemnt  (ver. 5.3)
+		    A help file for {F}ile {T}ype {P}lugin {DEV}elopemnt  (ver. 5.6)
 				by Marcin Szamotulski
 			    mszamot [AT] gmail [DOT] com
 			----------------------------------------
@@ -13,14 +13,13 @@ available commands and maps with some explanation:
 ======
 NEWS							*ftpdev-news*	
 >
- version 5.5
+ version 5.6
 <
- |ftpdev-:Function|, |ftpdev-:Command|, |ftpdev-:MapLhs|, |ftpdev-:MapRhs| and
- |ftpdev-:Variable| are using location list rather than the quick fix list.
- Use |:llist|, |:lne| and |:lp| vim commands.
+ |g:ftplugin_dir| and |g:ftplugin_installdir| should work out of the box (only
+ if the edited file is not already installed in the 'runtimepath'
+     |g:ftplugin_installdir| will point to the first path in 'runtimepath').
 
- |ftpdev-:S| command is works well when the pattern contains |\v| (but not
- when it mixes |\m|, |\v|).
+ |ftpdev-:Install| will print where it puts files.
 >
  version 5.4
 <
@@ -29,11 +28,6 @@ NEWS							*ftpdev-news*
 
  :Edit, :Split, ... commands removed. Instead the |path| option is set so you
  can use |:find|, |:sfind|, ... commands.
-
->
- version 5.3
-<
- See |ftpdev-:Eval|.
 
 ======
 CONFIGURATION						*ftpdev-configure* 
@@ -84,14 +78,15 @@ SEARCHING COMMANDS ~
 :Function[!] {fname} [line]				*ftpdev-:Function*
 	This finds function with name matching {fname} vim pattern under the
 	|ftpdev-g:ftplugin_dir| directory. It uses the internal grep, i.e.
-	|vimgrep|. {fname} should be as the first argument of |vimgrep| except
-	it doesn't have to be put between /.../ .
+	|lvimgrep|. {fname} should be as the first argument of |lvimgrep| except
+	it doesn't have to be put between /.../.
 
-	{fname} should not begin with <SID> or 's:' even if the function name has
-	it.
+	{fname} should not begin with <SID> or 's:' even if the function name
+	has it.
 
-	The bang vimgrep is supplied with the j switch, i.e. only quick fix
-	list will be filled with matches.
+	The bang is present |lvimgrep| is supplied with the j switch, i.e.
+	the location list will be filled with matches without jumping to the
+	first match.
 
 	There is a completion for {fname}s.
 
@@ -104,7 +99,7 @@ SEARCHING COMMANDS ~
 
 :Command[!] {cname} [line]				*ftpdev-:Command*
 	This finds command which name matches {fname} vim pattern under the
-	|ftpdev-g:ftplugin_dir| {cname> has the same syntax as {fname}. The
+	|ftpdev-g:ftplugin_dir| {cname} has the same syntax as {fname}. The
 	bang works as in |ftpdev-:Function|
 
 	There is a completion for {cname}s.
@@ -128,6 +123,7 @@ SEARCHING COMMANDS ~
 	This finds maps which rhs matches {maprhs} vim pattern. The bang works as in
 	|ftpdev-:Function|
 	The [line] argument is the same as in |ftpdev-:Function|.
+
 							*ftpdev-]#*
 							*ftpdev-[#*
 							*ftpdev-:S*
@@ -136,7 +132,8 @@ map ]#
 map [#
 	This function make a search of {pattern} in the current function (it
 	can wrap around the end of function. The argument {pattern} is a vim
-	pattern passed to |vimgrep|.
+	pattern passed to |vimgrep|. Mixing |\v| and |\m| in a pattern is not
+	supported.
 
 	The pattern is added to search history and copied to the @/ register,
 	thus you can re use it with |n| and |N| commands to search globally or
@@ -155,8 +152,8 @@ map [#
 
 							*ftpdev-:Pgrep*
 :Pgrep /{pattern}/[j][g]
-	This makes |vimgrep| in all files under |ftpdev-g:ftplugin_dir|.  The
-	argument syntax is the same as for |vimgrep|.
+	This makes |lvimgrep| in all files under |ftpdev-g:ftplugin_dir|.  The
+	argument syntax is the same as for |lvimgrep|.
 
 This note is just for completeness:
 Vim has its own vim.vim ftplugin which defines: 
@@ -173,8 +170,10 @@ nmap GN							*ftpdev-GN*
  nmap	Gn	:call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]*\<\zsendif\>')<CR>
  nmap	GN	:call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]*\<\zsendif\>', 'b')<CR>
 <	
+	You can also use the |matchit| plugin. Just configure |b:match_words|
+	variable.
 
-INSTALLING ~
+INSTALLING PLUGIN TO THE RUNTIME PATH ~
 
 :Install[!] 						*ftpdev-:Install*
 	Without bang "!": it will copy the current buffer to the location
@@ -187,29 +186,5 @@ INSTALLING ~
 		au BufWritePost <some_file>	:Install
 
 Happy vimming :)	
-
-================================================================================
-COPY RIGHTS						*ftpdev-copy-rights*
-
-
-    Copyright (C) 2010 Marcin Szamotulski Permission is hereby granted to use
-    and distribute this code, with or without modifications, provided that
-    this copyright notice is copied with it. 
-
-    FTPDEV filetype plugin for Vim is free software: you can redistribute it
-    and/or modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
- 
-    FTPDEV filetype plugin for Vim is distributed in the hope that it will be
-    useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
-    Public License for more details.
- 
-    You should have received a copy of the GNU General Public License along
-    with FTPDEV filetype plugin for Vim.  If not, see <http://www.gnu.org/licenses/>.
-
-    This licence applies to all files shipped with FTPDEV filetype plugin.
-
 
 vim:tw=75:ts=8:ft=help:norl:ft=help
