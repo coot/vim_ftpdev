@@ -15,11 +15,16 @@ NEWS							*ftpdev-news*
 >
  version 5.6
 <
- |g:ftplugin_dir| and |g:ftplugin_installdir| should work out of the box (only
- if the edited file is not already installed in the 'runtimepath'
-     |g:ftplugin_installdir| will point to the first path in 'runtimepath').
+ |g:ftplugin_dir| and |g:ftplugin_installdir| should work out of the box.
+ |g:ftplugin_installdir| will work if one file of the project is already
+ installed in the 'runtimepath' (and it is distinguished on under
+ 'runtimepath').
 
- |ftpdev-:Install| will print where it puts files.
+ |ftpdev-:Install| will print where it puts files and will make missing
+ directories.
+
+ You can folow development of this plugin on GitHub:
+ https://github.com/coot/vim_ftpdev
 >
  version 5.4
 <
@@ -56,7 +61,7 @@ in my vimrc file via an autocommand: >
 							*ftpdev-g:ftplugin_notinstall*
 g:ftplugin_notinstall=['Makefile', '.*\.tar\.\%(bz2\|gz\)$', '.*\.vba$']
 	This is list of patterns or file names relative to |g:ftplugin_dir|
-	which will not be installed by |ftpdev-:Install| command.
+	which will not be installed by the |ftpdev-:Install| command.
 
 							*ftpdev-g:ftplugin_installdir*
 g:ftplugin_installdir=split(&runtimepath,",")[0]
@@ -184,6 +189,9 @@ INSTALLING PLUGIN TO THE RUNTIME PATH ~
 
 	You can use this command in an autocommand for certain files: >
 		au BufWritePost <some_file>	:Install
+<
+	If a directory tree is missing |ftpdev-:Install| will make it on the
+	fly.
 
 Happy vimming :)	
 

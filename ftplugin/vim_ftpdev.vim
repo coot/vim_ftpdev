@@ -41,39 +41,70 @@ if !exists("g:ftplugin_dir")
 	let g:ftplugin_dir = expand("%:p:h")
     endif
 endif
-if !exists("g:ftplugin_installdir")
-    exe 'lcd '.fnameescape(g:ftplugin_dir)
-    let file = globpath(&rtp, expand("%"))
+fun! FTPDEV_GetInstallDir()
+    " lcd to g:ftplugin_dir, we want path to be relative to this directory.
+    exe 'lcd '.fnameescape(g:ftplugin_dir) 
+    " Check only vim files:
+    let files = map(filter(split(globpath('.', '**'), '\n'), 'fnamemodify(v:val, ":e") == "vim"'), 'v:val[2:]')
     lcd -
-    let dir_path = ''
-    for dir in s:vim_dirs
-	let dir_path = fnamemodify(finddir(dir, fnamemodify(file, ':h').';'), ':p')
-	if !empty(dir_path)
+    " Good files to check are those in s:vim_dirs:
+    " i.e. in plugin, ftplugin, ... directories.
+    let gfiles = []
+    for file in files
+	if file =~ '^\%('.join(s:vim_dirs, '\|').'\)\>'
+	    call add(gfiles, file)
+	endif
+    endfor
+    if len(gfiles)
+	let files = gfiles
+    endif
+    " ipath - install path
+    let ipath = ''
+    for file in files
+	" Find each file in 'runtimepath'
+	let ipath = globpath(&rtp, file)
+	if !empty(ipath)
 	    break
 	endif
     endfor
+    " Get the install path, count the directory level of file and strip that
+    " many directories from the corresponing ipath. This should be the install
+    " path.
+    let idx = 0
+    while file != "."
+	let idx += 1
+	let file = fnamemodify(file, ':h')
+    endwhile
+    let ipath = fnamemodify(ipath, repeat(':h', idx))
+    return ipath
+endfun
+if !exists("g:ftplugin_installdir")
+    let dir = FTPDEV_GetInstallDir()
     if !empty(dir)
 	let g:ftplugin_installdir = fnamemodify(dir_path, ':h:h')
     else
 	let g:ftplugin_installdir = split(&rtp, ',')[0]
     endif
 endif
+	    
+
+
 if !exists("g:ftplugin_notinstall")
-    let g:ftplugin_notinstall=['Makefile', '\.tar\%(\.\%(bz2\|gz\)\)\?$', '\.vba$', '.*\.vmb$']
+    let g:ftplugin_notinstall=['Makefile', '\.tar\%(\.bz2\|\.gz\)\?$', '\.vba$', '.*\.vmb$']
 endif
 if exists("g:ftplugin_ResetPath") && g:ftplugin_ResetPath == 1
     au! BufEnter *.vim exe "setl path=".substitute(g:ftplugin_dir.",".join(filter(split(globpath(g:ftplugin_dir, '**'), "\n"), "isdirectory(v:val)"), ","), " ", '\\\\\\\ ', 'g')
 else
-    function! FTPLUGIN_AddPath()
+    func! FTPDEV_AddPath()
 	let path=map(split(&path, ','), "fnamemodify(v:val, ':p')")
 	if index(path,fnamemodify(g:ftplugin_dir, ":p")) == -1 && g:ftplugin_dir != ""
 	    let add = join(filter(split(globpath(g:ftplugin_dir, '**'), "\n"), "isdirectory(v:val)"), ",")
 	    let add = substitute(add, " ", '\\\\\\\ ', 'g')
 	    exe "setl path+=".add
 	endif
-    endfunction
-    exe "au! BufEnter ".g:ftplugin_dir."* call FTPLUGIN_AddPath()"
-    exe "au! VimEnter * call FTPLUGIN_AddPath()"
+    endfun
+    exe "au! BufEnter ".g:ftplugin_dir."* call FTPDEV_AddPath()"
+    exe "au! VimEnter * call FTPDEV_AddPath()"
 endif
 try
 "1}}}
@@ -363,7 +394,8 @@ function! <SID>Install(bang) "{{{1
 	echom 'File installed to: "'.install_path.'".'
     else
 	let install_path = substitute(g:ftplugin_installdir, '\/\s*$', '', '')
-	for file in filter(split(globpath(g:ftplugin_dir, '**'), "\n"), "!isdirectory(v:val) && <SID>Index(g:ftplugin_notinstall, fnamemodify(v:val, ':.')) == -1")
+	let file_list = filter(split(globpath(g:ftplugin_dir, '**'), "\n"), "!isdirectory(v:val) && !Match(g:ftplugin_notinstall, fnamemodify(v:val, ':.'))")
+	for file in file_list
 	    if bufloaded(file)
 		let file_list = getbufline(file, '1', '$')
 	    else
@@ -371,20 +403,29 @@ function! <SID>Install(bang) "{{{1
 	    endif
 	    let file_name = fnamemodify(file, ':.')
 	    echo 'Installing: "'.file_name.'" to "'.install_path.'/'.file_name.'"'
-	    call writefile(file_list, install_path.'/'.file_name)
+	    try
+		call writefile(file_list, install_path.'/'.file_name)
+	    catch /E482/
+		let dir = fnamemodify(install_path.'/'.file_name, ':h')
+		echohl WarningMsg
+		echom 'Making directory "'.dir.'"'
+		echohl None
+		call mkdir(dir, 'p')
+		call writefile(file_list, install_path.'/'.file_name)
+	    endtry
 	endfor
     endif
     lcd -
 endfunction
-function! <SID>Index(list, pattern) "{{{2
-    let ind = -1
-    for element in a:list
-	let ind += 1
-	if element =~ a:pattern || element == a:pattern
+function! Match(pattern_list, element) "{{{2
+    let match = 0
+    for pattern in a:pattern_list
+	if a:element =~ pattern || a:element == pattern
+	    let match = 1
 	    break
 	endif
     endfor
-    return ind
+    return match
 endfunction "}}}2
 command! -bang Install 	:call <SID>Install(<q-bang>)
 
