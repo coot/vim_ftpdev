@@ -148,6 +148,9 @@ SEARCHING COMMANDS ~
 	command (read there about the difference when Vim has Python
 	interface).
 
+	Note: [todo] some completions might not work (especially complex right
+	hand side maps, Goto function should check for == in this case).
+
 							*ftpdev-]#*
 							*ftpdev-[#*
 							*ftpdev-:S*

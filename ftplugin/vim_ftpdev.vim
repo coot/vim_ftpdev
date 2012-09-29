@@ -114,7 +114,7 @@ try
 setlocal fileformats=unix,dos
 
 " FUNCTIONS AND COMMANDS AND MAPS:
-fun! PyGrep(what, files) " {{{1
+fun! <SID>PyGrep(what, files) " {{{1
 python << EOF
 import vim
 import re
@@ -190,7 +190,7 @@ function! Goto(what,bang,...) "{{{1
     elseif a:what == 'variable'
 	let pattern 		= '^\s*let\s\+' . ( a:0 >=  1 ? pattern : '' )
     elseif a:what == 'maplhs'
-	let cpat		= '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\?\zs.*'
+	let cpat		= '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\?\zs\S*'
 	let pattern		= ( a:0 >= 1 ? pattern : '' )
 	if !has("python")
 	    let pattern		=  '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\?'.pattern
@@ -210,14 +210,19 @@ function! Goto(what,bang,...) "{{{1
     if has("python")
         call map(files, 'fnamemodify(v:val, ":p")')
         if !exists("s:loclist")
-            let loclist = PyGrep(a:what, files)
+            let loclist = <SID>PyGrep(a:what, files)
         else
             let loclist = s:loclist
             unlet s:loclist
         endif
-	for loc in loclist
-	    let loc['text'] = matchstr(loc['text'], cpat)
-	endfor
+	if a:what == 'maplhs' || a:what == 'maprhs'
+	    let nloclist = []
+	    for loc in loclist
+		let loc['text'] = matchstr(loc['text'], cpat)
+		call add(nloclist, loc)
+	    endfor
+	    let loclist = nloclist
+	endif
         call filter(loclist, 'v:val["text"] =~ pattern')
         call setloclist(0, loclist)
         try
@@ -260,11 +265,10 @@ endtry
 command! -buffer -bang -nargs=? -complete=customlist,FuncCompl Function 	:call Goto('function', <q-bang>, <q-args>) 
 try
 function! FuncCompl(A,B,C) "{{{1
-    let time = reltime()
     let files = map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
     let filename = join(files)
     if has("python")
-        let loclist = PyGrep('function', files)
+        let loclist = <SID>PyGrep('function', files)
         let s:loclist = deepcopy(loclist)
     else
         let saved_loclist=getloclist(0)
@@ -280,7 +284,6 @@ function! FuncCompl(A,B,C) "{{{1
     call map(loclist, 'matchstr(v:val, ''^\s*fun\%[ction]!\=\s*\(<\csid>\|\cs:\)\=\zs.*\ze\s*('')')
     call filter(loclist, "v:val =~ a:A")
     call map(loclist, 'v:val.''\>''')
-    let g:time = reltimestr(reltime(time))
     return loclist
 endfunction
 catch /E127/
@@ -290,7 +293,7 @@ function! CommandCompl(A,B,C) "{{{1
     let files = map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
     let filename = join(files)
     if has("python")
-        let loclist = PyGrep('command', files)
+        let loclist = <SID>PyGrep('command', files)
         let s:loclist = deepcopy(loclist)
     else
         let saved_loclist=getloclist(0)
@@ -313,7 +316,7 @@ function! MapRhsCompl(A,B,C) "{{{1
     let files = map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
     let filename = join(files)
     if has("python")
-        let loclist = PyGrep('maprhs', files)
+        let loclist = <SID>PyGrep('maprhs', files)
         let s:loclist = deepcopy(loclist)
     else
         let saved_loclist=getloclist(0)
@@ -326,7 +329,7 @@ function! MapRhsCompl(A,B,C) "{{{1
     endif
     call map(loclist, 'get(v:val, "text", "")')  
     call map(loclist, 'matchstr(v:val, ''^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\=\zs.*'')')
-    call map(loclist, 'matchstr(v:val, ''\S\+\s\+\zs.*'')')
+    call map(loclist, 'matchstr(v:val, ''\S\+\s\+\%(<plug>\)\?\zs.*'')')
     call filter(loclist, 'v:val =~ a:A')
     call map(loclist, 'escape(v:val, "[]")')
     return loclist
@@ -338,7 +341,7 @@ function! MapLhsCompl(A,B,C) "{{{1
     let files = map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
     let filename = join(files)
     if has("python")
-        let loclist = PyGrep('maplhs', files)
+        let loclist = <SID>PyGrep('maplhs', files)
         let s:loclist = deepcopy(loclist)
     else
         let saved_loclist=getloclist(0)
@@ -442,14 +445,14 @@ nmap <silent> <buffer> <C-N>				:call SearchInFunction(@/,'')<CR>
 nmap <silent> <buffer> <C-P> 				:call SearchInFunction(@/,'b')<CR>
 nmap <silent> <buffer> gn 				:call SearchInFunction(@/,( v:searchforward ? '' : 'b'))<CR>
 nmap <silent> <buffer> gN				:call SearchInFunction(@/,(!v:searchforward ? '' : 'b'))<CR>
-function! PluginDir(...)
+function! <SID>PluginDir(...) "{{{1
     if a:0 == 0 
 	echo g:ftplugin_dir
     else
 	let g:ftplugin_dir=a:1
     endif
-endfunction
-command! -nargs=? -complete=file PluginDir	:call PluginDir(<f-args>)
+endfunction "}}}1
+command! -nargs=? -complete=file PluginDir	:call <SID>PluginDir(<f-args>)
 
 try
 function! Pgrep(vimgrep_arg) "{{{1
