@@ -114,6 +114,50 @@ try
 setlocal fileformats=unix,dos
 
 " FUNCTIONS AND COMMANDS AND MAPS:
+fun! PyGrep(what, files) " {{{1
+python << EOF
+import vim
+import re
+import json
+
+what = vim.eval('a:what')
+files = vim.eval('a:files')
+
+if what == 'function':
+    pat = re.compile('^\s*(?:silent!?)?\s*(?:fu|fun|func|funct|functio|function)')
+elif what == 'command':
+    pat = re.compile('^\s*(?:silent!?)?\s*(?:com|comm|comma|comman|command)!?')
+elif what == 'variable':
+    pat = re.compile('^\s*let\s+')
+elif what == 'maplhs' or what == 'maprhs':
+    pat = re.compile('^\s*[cilnosvx!]?(?:nore\)?(?:m|ma|map)' )
+
+loclist = []
+for filename in files:
+    if vim.eval("bufloaded('%s')" % filename) == '1':
+        for buf in vim.buffers:
+            if buf.name == filename:
+                buf_nr = buf.number
+                break
+    else:
+        buf_nr = 0
+        with open(filename) as fo:
+            buf = fo.readlines()
+    lnr = 0
+    for line in buf:
+        lnr += 1
+        match = re.match(pat, line)
+        if match:
+            loclist.append({
+                "bufnr" : buf_nr,
+                "filename" : filename,
+                "lnum" : lnr,
+                "text" : line
+                })
+vim.command("let loclist=%s" % json.dumps(loclist))
+EOF
+return loclist
+endfun
 function! Goto(what,bang,...) "{{{1
     let pattern = (a:0 >= 1 ? 
 		\ (a:1 =~ '.*\ze\s\+\d\+$' ? matchstr(a:1, '.*\ze\s\+\d\+$') : a:1)
@@ -136,21 +180,42 @@ function! Goto(what,bang,...) "{{{1
     else
 	let pattern 		= '^\s*[ci]\=\%(\%(nore\|un\)a\%[bbrev]\|ab\%[breviate]\)' . ( a:0 >= 1 ? pattern : '' )
     endif
-    let filename		= join(map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)"))
+    let files			= map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
+    let filename		= join(files)
 
-    let error = 0
-    try
-	exe 'silent! lvimgrep /'.pattern.'/' . grep_flag . ' ' . filename
-    catch /E480:/
-	echoerr 'E480: No match: ' . pattern
-	let error = 1
-    endtry
+    if has("python")
+        call map(files, 'fnamemodify(v:val, ":p")')
+        if !exists("s:loclist")
+            let loclist = PyGrep(a:what, files)
+        else
+            let loclist = s:loclist
+            unlet s:loclist
+        endif
+        call filter(loclist, 'v:val["text"] =~ pattern')
+        call setloclist(0, loclist)
+        try
+            ll
+            let error = 0
+        catch /E42/
+            let error = 1
+        endtry
+    else
+	let error = 0
+        if !exists("s:loclist")
+            try
+                exe 'silent! lvimgrep /'.pattern.'/' . grep_flag . ' ' . filename
+            catch /E480:/
+                echoerr 'E480: No match: ' . pattern
+                let error = 1
+            endtry
+        endif
+    endif
 
     if len(getloclist(".")) >= 2
 	llist
     endif
     if !error
-	exe 'silent! normal zO'
+	exe 'silent! normal zv'
 	exe 'normal zt'
     endif
 
@@ -164,43 +229,71 @@ endtry
 " Completion is not working for a very simple reason: we are edditing a vim
 " script which might not be sourced.
 command! -buffer -bang -nargs=? -complete=customlist,FuncCompl Function 	:call Goto('function', <q-bang>, <q-args>) 
+try
 function! FuncCompl(A,B,C) "{{{1
-    let saved_loclist=getloclist(0)
-    let filename	= join(map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)"))
-    try
-	exe 'lvimgrep /^\s*fun\%[ction]/gj '.filename
-    catch /E480:/
-    endtry
-    let loclist = getloclist(0)
-    call setloclist(0, saved_loclist)
+    let time = reltime()
+    let files = map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
+    let filename = join(files)
+    if has("python")
+        let loclist = PyGrep('function', files)
+        let s:loclist = deepcopy(loclist)
+    else
+        let saved_loclist=getloclist(0)
+        try
+            exe 'lvimgrep /^\s*fun\%[ction]/gj '.filename
+        catch /E480:/
+        endtry
+        let loclist = getloclist(0)
+        let s:loclist = deepcopy(loclist)
+        call setloclist(0, saved_loclist)
+    endif
     call map(loclist, 'get(v:val, "text", "")')  
     call map(loclist, 'matchstr(v:val, ''^\s*fun\%[ction]!\=\s*\(<\csid>\|\cs:\)\=\zs.*\ze\s*('')')
     call filter(loclist, "v:val =~ a:A")
     call map(loclist, 'v:val.''\>''')
+    let g:time = reltimestr(reltime(time))
     return loclist
 endfunction
+catch /E127/
+endtry
+try
 function! CommandCompl(A,B,C) "{{{1
-    let saved_loclist=getloclist(0)
-    let filename	= join(map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)"))
-    try
-	exe 'lvimgrep /^\s*com\%[mand]/gj '.filename
-    catch /E480:/
-    endtry
-    let loclist = getloclist(0)
-    call setloclist(0, saved_loclist)
+    let files = map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
+    let filename = join(files)
+    if has("python")
+        let loclist = PyGrep('command', files)
+        let s:loclist = deepcopy(loclist)
+    else
+        let saved_loclist=getloclist(0)
+        try
+            exe 'lvimgrep /^\s*com\%[mand]/gj '.filename
+        catch /E480:/
+        endtry
+        let loclist = getloclist(0)
+        call setloclist(0, saved_loclist)
+    endif
     call map(loclist, 'get(v:val, "text", "")')  
     call map(loclist, 'matchstr(v:val, ''^\s*com\%[mand]!\=\(\s*-buffer\s*\|\s*-nargs=[01*?+]\s*\|\s*-complete=\S\+\s*\|\s*-bang\s*\|\s*-range=\=[\d%]*\s*\|\s*-count=\d\+\s*\|\s*-bar\s*\|\s*-register\s*\)*\s*\zs\w*\>\ze'')')
     call map(loclist, 'v:val.''\>''')
     return join(loclist, "\n")
 endfunction
+catch /E127/
+endtry
+try
 function! MapRhsCompl(A,B,C) "{{{1
-    let saved_loclist=getloclist(0)
-    let filename	= join(map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)"))
-    try
-	exe 'lvimgrep /^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>/gj '.filename
-    catch /E480:/
-    endtry
-    let loclist = getloclist(0)
+    let files = map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
+    let filename = join(files)
+    if has("python")
+        let loclist = PyGrep('maprhs', files)
+        let s:loclist = deepcopy(loclist)
+    else
+        let saved_loclist=getloclist(0)
+        try
+            exe 'lvimgrep /^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>/gj '.filename
+        catch /E480:/
+        endtry
+        let loclist = getloclist(0)
+    endif
     call setloclist(0, saved_loclist)
     call map(loclist, 'get(v:val, "text", "")')  
     call map(loclist, 'matchstr(v:val, ''^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\=\zs.*'')')
@@ -208,20 +301,31 @@ function! MapRhsCompl(A,B,C) "{{{1
     call map(loclist, 'escape(v:val, "[]")')
     return join(loclist, "\n")
 endfunction
+catch /E127/
+endtry
+try
 function! MapLhsCompl(A,B,C) "{{{1
-    let saved_loclist=getloclist(0)
-    let filename	= join(map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)"))
-    try
-	exe 'lvimgrep /^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>/gj '.filename
-    catch /E480:/
-    endtry
-    let loclist = getloclist(0)
-    call setloclist(0, saved_loclist)
+    let files = map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
+    let filename = join(files)
+    if has("python")
+        let loclist = PyGrep('maplhs', files)
+        let s:loclist = deepcopy(loclist)
+    else
+        let saved_loclist=getloclist(0)
+        try
+            exe 'lvimgrep /^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>/gj '.filename
+        catch /E480:/
+        endtry
+        let loclist = getloclist(0)
+        call setloclist(0, saved_loclist)
+    endif
     call map(loclist, 'get(v:val, "text", "")')  
     call map(loclist, 'matchstr(v:val, ''^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\=\zs\S*\ze'')')
     call map(loclist, 'escape(v:val, "[]")')
     return join(loclist, "\n")
-endfunction "}}}1
+endfunction
+catch /E127/
+endtry "}}}1
 command! -buffer -bang -nargs=? -complete=custom,CommandCompl 	Command 	:call Goto('command', <q-bang>, <q-args>) 
 command! -buffer -bang -nargs=?  			     	Variable 	:call Goto('variable', <q-bang>, <q-args>) 
 command! -buffer -bang -nargs=? -complete=custom,MapLhsCompl 	MapLhs 		:call Goto('maplhs', <q-bang>, <q-args>) 

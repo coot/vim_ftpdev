@@ -13,8 +13,13 @@ available commands and maps with some explanation:
 ======
 NEWS							*ftpdev-news*	
 >
- version 5.6
+ version 6
 <
+ The core functionality of |ftpdev-:Function|, |ftpdev-:Command|,
+ |ftpdev-:MapLhs| and |ftpdev-:MapRhs| was rewritten in Python. If your Vim
+ has Python interface (:echo has("+python")) then these commands will be much
+ faster.
+
  |g:ftplugin_dir| and |g:ftplugin_installdir| should work out of the box.
  |g:ftplugin_installdir| will work if one file of the project is already
  installed in the 'runtimepath' (and it is distinguished on under
