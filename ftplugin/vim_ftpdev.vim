@@ -81,7 +81,7 @@ endfun
 if !exists("g:ftplugin_installdir")
     let dir = FTPDEV_GetInstallDir()
     if !empty(dir)
-	let g:ftplugin_installdir = fnamemodify(dir_path, ':h:h')
+	let g:ftplugin_installdir = dir
     else
 	let g:ftplugin_installdir = split(&rtp, ',')[0]
     endif
@@ -124,13 +124,15 @@ what = vim.eval('a:what')
 files = vim.eval('a:files')
 
 if what == 'function':
-    pat = re.compile('^\s*(?:silent!?)?\s*(?:fu|fun|func|funct|functio|function)')
+    pat = re.compile('\s*(?:silent!?)?\s*(?:fu|fun|func|funct|functio|function)!?\s')
 elif what == 'command':
-    pat = re.compile('^\s*(?:silent!?)?\s*(?:com|comm|comma|comman|command)!?')
+    pat = re.compile('\s*(?:silent!?)?\s*(?:com|comm|comma|comman|command)!?\s')
 elif what == 'variable':
-    pat = re.compile('^\s*let\s+')
-elif what == 'maplhs' or what == 'maprhs':
-    pat = re.compile('^\s*[cilnosvx!]?(?:nore\)?(?:m|ma|map)' )
+    pat = re.compile('\s*let\s')
+elif what == 'maplhs':
+    pat = re.compile('\s*[cilnosvx!]?(?:nore)?(?:m|ma|map)\s' )
+elif  what == 'maprhs':
+    pat = re.compile('\s*[cilnosvx!]?(?:nore)?(?:m|ma|map)' )
 
 loclist = []
 for filename in files:
@@ -142,10 +144,24 @@ for filename in files:
     else:
         buf_nr = 0
         with open(filename) as fo:
-            buf = fo.readlines()
+            buf = fo.read().splitlines()
     lnr = 0
-    for line in buf:
+    buf_len = len(buf)
+    while lnr < buf_len:
         lnr += 1
+	line = buf[lnr-1]
+	if line.startswith('py'):
+	    # Skip over :python << EOF, :perl << EOF until EOF:
+	    eof = re.match('(?:py|pyt|pyth|pytho|python|pe|per|perl)\s*<<\s*(\w+)',line).group(1)
+	    while not line.startswith(eof):
+		lnr +=1
+		if lnr == buf_len:
+		    break
+		line = buf[lnr-1]
+	    if lnr == buf_len:
+		break
+	    lnr += 1
+	    line = buf[lnr-1]
         match = re.match(pat, line)
         if match:
             loclist.append({
@@ -174,9 +190,17 @@ function! Goto(what,bang,...) "{{{1
     elseif a:what == 'variable'
 	let pattern 		= '^\s*let\s\+' . ( a:0 >=  1 ? pattern : '' )
     elseif a:what == 'maplhs'
-	let pattern		= '^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\=' . ( a:0 >= 1 ? pattern : '' )
+	let cpat		= '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\?\zs.*'
+	let pattern		= ( a:0 >= 1 ? pattern : '' )
+	if !has("python")
+	    let pattern		=  '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\?'.pattern
+	endif
     elseif a:what == 'maprhs'
-	let pattern		= '^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>\s+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\s\+\<\S\+\>\s\+\%(<plug>\)\=' . ( a:0 >= 1 ? pattern : '' )
+	let cpat		= '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\s\+\<\S\+\>\s\+\%(<plug>\)\?\zs.*'
+	let pattern		= ( a:0 >= 1 ? pattern : '' )
+	if !has("python")
+	    let pattern		=  '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\s\+\<\S\+\>\s\+\%(<plug>\)\?'.pattern
+	endif
     else
 	let pattern 		= '^\s*[ci]\=\%(\%(nore\|un\)a\%[bbrev]\|ab\%[breviate]\)' . ( a:0 >= 1 ? pattern : '' )
     endif
@@ -191,6 +215,9 @@ function! Goto(what,bang,...) "{{{1
             let loclist = s:loclist
             unlet s:loclist
         endif
+	for loc in loclist
+	    let loc['text'] = matchstr(loc['text'], cpat)
+	endfor
         call filter(loclist, 'v:val["text"] =~ pattern')
         call setloclist(0, loclist)
         try
@@ -216,7 +243,9 @@ function! Goto(what,bang,...) "{{{1
     endif
     if !error
 	exe 'silent! normal zv'
-	exe 'normal zt'
+	if a:what == 'function'
+	    exe 'normal zt'
+	endif
     endif
 
     " Goto lines below
@@ -293,13 +322,14 @@ function! MapRhsCompl(A,B,C) "{{{1
         catch /E480:/
         endtry
         let loclist = getloclist(0)
+	call setloclist(0, saved_loclist)
     endif
-    call setloclist(0, saved_loclist)
     call map(loclist, 'get(v:val, "text", "")')  
     call map(loclist, 'matchstr(v:val, ''^\s*[cilnosvx!]\=\%(nore\)\=m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\=\zs.*'')')
     call map(loclist, 'matchstr(v:val, ''\S\+\s\+\zs.*'')')
+    call filter(loclist, 'v:val =~ a:A')
     call map(loclist, 'escape(v:val, "[]")')
-    return join(loclist, "\n")
+    return loclist
 endfunction
 catch /E127/
 endtry
@@ -329,7 +359,7 @@ endtry "}}}1
 command! -buffer -bang -nargs=? -complete=custom,CommandCompl 	Command 	:call Goto('command', <q-bang>, <q-args>) 
 command! -buffer -bang -nargs=?  			     	Variable 	:call Goto('variable', <q-bang>, <q-args>) 
 command! -buffer -bang -nargs=? -complete=custom,MapLhsCompl 	MapLhs 		:call Goto('maplhs', <q-bang>, <q-args>) 
-command! -buffer -bang -nargs=? -complete=custom,MapRhsCompl 	MapRhs 		:call Goto('maprhs', <q-bang>, <q-args>) 
+command! -buffer -bang -nargs=? -complete=customlist,MapRhsCompl 	MapRhs 		:call Goto('maprhs', <q-bang>, <q-args>) 
 
 " Search in current function
 function! SearchInFunction(pattern, flag) "{{{1

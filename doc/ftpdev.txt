@@ -20,6 +20,10 @@ NEWS							*ftpdev-news*
  has Python interface (:echo has("+python")) then these commands will be much
  faster.
 
+ For |ftpdev-:MapLhs| and |ftpdev-:MapRhs| if your vim is compiled with Python
+ interface then the pattern matches can use '^' to match the begining of the
+ lhs or rhs of the map (the '<plug>' is not included in the lhs/rhs).
+
  |g:ftplugin_dir| and |g:ftplugin_installdir| should work out of the box.
  |g:ftplugin_installdir| will work if one file of the project is already
  installed in the 'runtimepath' (and it is distinguished on under
@@ -129,10 +133,20 @@ SEARCHING COMMANDS ~
 	|ftpdev-:Function|
 	The [line] argument is the same as in |ftpdev-:Function|.
 
+	If Vim has Python interface then you can use '^' in {maplhs} pattern
+	to match the start of the map name ('<plug> is not included into the
+	map name). If Vim has not Python interface the {maplhs} always matches
+	at the begining, thus if you want to match anywhere use '.*' at the
+	begining of {maplhs}
+
 :MapRhs[!] {maprhs} [line]				*ftpdev-:MapRhs*
 	This finds maps which rhs matches {maprhs} vim pattern. The bang works as in
 	|ftpdev-:Function|
 	The [line] argument is the same as in |ftpdev-:Function|.
+
+	{maprhs} works in the same way as {maplhs} argument of |atp-:MapLhs|
+	command (read there about the difference when Vim has Python
+	interface).
 
 							*ftpdev-]#*
 							*ftpdev-[#*
