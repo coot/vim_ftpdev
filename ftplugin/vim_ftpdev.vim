@@ -4,6 +4,8 @@
 " License: vim-license, see ':help license'
 " Copyright: © Marcin Szamotulski, 2012
 " GetLatestVimScript: 3322 2 :AutoInstall: FTPDEV
+"
+" Todo: gd (search in current scope) and gD (search for global definition).
 " Copyright Statement: {{{1
 " 	  This file is a part of Automatic Tex Plugin for Vim.
 "
@@ -151,17 +153,17 @@ for filename in files:
         lnr += 1
 	line = buf[lnr-1]
 	if line.startswith('py'):
-	    # Skip over :python << EOF, :perl << EOF until EOF:
-	    eof = re.match('(?:py|pyt|pyth|pytho|python|pe|per|perl)\s*<<\s*(\w+)',line).group(1)
-	    while not line.startswith(eof):
-		lnr +=1
-		if lnr == buf_len:
-		    break
-		line = buf[lnr-1]
-	    if lnr == buf_len:
-		break
-	    lnr += 1
-	    line = buf[lnr-1]
+            # Skip over :python << EOF, :perl << EOF until EOF:
+            eof = re.match('(?:py|pyt|pyth|pytho|python|pe|per|perl)\s*<<\s*(\w+)',line).group(1)
+            while not line.startswith(eof):
+                lnr +=1
+                if lnr == buf_len:
+                    break
+                line = buf[lnr-1]
+            if lnr == buf_len:
+                break
+            lnr += 1
+            line = buf[lnr-1]
         match = re.match(pat, line)
         if match:
             loclist.append({
@@ -184,11 +186,26 @@ function! Goto(what,bang,...) "{{{1
     " Go to a:2 lines below
     let grep_flag = ( a:bang == "!" ? 'j' : '' )
     if a:what == 'function'
-	let pattern		= '^\s*\%(silent!\=\)\=\s*fu\%[nction]!\=\s\+\%(s:\|<\csid>\|\f\+\#\)\=' .  ( a:0 >=  1 ? pattern : '' )
+	if !has("python")
+	    let pattern		= '^\s*\%(silent!\=\)\=\s*fu\%[nction]!\=\s\+\%(s:\|<\csid>\|\f\+\#\)\=' .  ( a:0 >=  1 ? pattern : '' )
+	else
+	    let cpat		= '^\s*\%(silent!\=\)\=\s*fu\%[nction]!\=\s\+\%(s:\|<\csid>\)\=\zs[^(]*'
+	    let pattern		= ( a:0 >=  1 ? pattern : '' )
+	endif
     elseif a:what == 'command'
-	let pattern		= '^\s*\%(silent!\=\)\=\s*com\%[mand]!\=\%(\s*-buffer\s*\|\s*-nargs=[01*?+]\s*\|\s*-complete=\S\+\s*\|\s*-bang\s*\|\s*-range=\=[\d%]*\s*\|\s*-count=\d\+\s*\|\s*-bar\s*\|\s*-register\s*\)*\s*'.( a:0 >= 1 ? pattern : '' )
+	if !has("python")
+	    let pattern		= '^\s*\%(silent!\=\)\=\s*com\%[mand]!\=\%(\s*-buffer\s*\|\s*-nargs=[01*?+]\s*\|\s*-complete=\S\+\s*\|\s*-bang\s*\|\s*-range=\=[\d%]*\s*\|\s*-count=\d\+\s*\|\s*-bar\s*\|\s*-register\s*\)*\s*'.( a:0 >= 1 ? pattern : '' )
+	else
+	    let cpat		= '^\s*\%(silent!\=\)\=\s*com\%[mand]!\=\%(\s*-buffer\s*\|\s*-nargs=[01*?+]\s*\|\s*-complete=\S\+\s*\|\s*-bang\s*\|\s*-range=\=[\d%]*\s*\|\s*-count=\d\+\s*\|\s*-bar\s*\|\s*-register\s*\)*\s*\zs\S*'
+	    let pattern		= ( a:0 >= 1 ? pattern : '' )
+	endif
     elseif a:what == 'variable'
-	let pattern 		= '^\s*let\s\+' . ( a:0 >=  1 ? pattern : '' )
+	if !has("python")
+	    let pattern 	= '^\s*let\s\+' . ( a:0 >=  1 ? pattern : '' )
+	else
+	    let cpat 		= '^\s*let\s\+\zs[^\s=]*'
+	    let pattern 	= ( a:0 >=  1 ? pattern : '' )
+	endif
     elseif a:what == 'maplhs'
 	let cpat		= '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\?\zs\S*'
 	let pattern		= ( a:0 >= 1 ? pattern : '' )
@@ -215,15 +232,13 @@ function! Goto(what,bang,...) "{{{1
             let loclist = s:loclist
             unlet s:loclist
         endif
-	if a:what == 'maplhs' || a:what == 'maprhs'
-	    let nloclist = []
-	    for loc in loclist
-		let loc['text'] = matchstr(loc['text'], cpat)
-		call add(nloclist, loc)
-	    endfor
-	    let loclist = nloclist
-	endif
-        call filter(loclist, 'v:val["text"] =~ pattern')
+	let nloclist = []
+	for loc in loclist
+	    let loc['m_text'] = matchstr(loc['text'], cpat)
+	    call add(nloclist, loc)
+	endfor
+        let loclist = nloclist
+        call filter(loclist, 'v:val["m_text"] =~ pattern')
         call setloclist(0, loclist)
         try
             ll
@@ -283,7 +298,11 @@ function! FuncCompl(A,B,C) "{{{1
     call map(loclist, 'get(v:val, "text", "")')  
     call map(loclist, 'matchstr(v:val, ''^\s*fun\%[ction]!\=\s*\(<\csid>\|\cs:\)\=\zs.*\ze\s*('')')
     call filter(loclist, "v:val =~ a:A")
-    call map(loclist, 'v:val.''\>''')
+    if !has("python")
+	call map(loclist, 'v:val.''\>''')
+    else
+	call map(loclist, '"^".v:val."\\>"')
+    endif
     return loclist
 endfunction
 catch /E127/
@@ -306,7 +325,11 @@ function! CommandCompl(A,B,C) "{{{1
     endif
     call map(loclist, 'get(v:val, "text", "")')  
     call map(loclist, 'matchstr(v:val, ''^\s*com\%[mand]!\=\(\s*-buffer\s*\|\s*-nargs=[01*?+]\s*\|\s*-complete=\S\+\s*\|\s*-bang\s*\|\s*-range=\=[\d%]*\s*\|\s*-count=\d\+\s*\|\s*-bar\s*\|\s*-register\s*\)*\s*\zs\w*\>\ze'')')
-    call map(loclist, 'v:val.''\>''')
+    if !has("python")
+	call map(loclist, 'v:val.''\>''')
+    else
+	call map(loclist, '"^".v:val."\\>"')
+    endif
     return join(loclist, "\n")
 endfunction
 catch /E127/
@@ -638,3 +661,46 @@ function! <SID>PrintTable(list, spaces) "{{{1
     
     return atplib#Table(list, spaces_list)
 endfunction
+
+fun! LocalDefi(variable)
+python << EOF
+import vim
+import re
+
+var = vim.eval('a:variable')
+buf = vim.current.buffer
+idx = vim.current.window.cursor[0]-1
+col = 0
+
+var_pat = re.compile(r'^\s*let\s*%s\b' % var)
+endfun_pat = re.compile(r'^\s*(?:endf|endfu|endfun|endfunc|endfunct|endfuncti|endfunctio|endfunction)\b')
+fun_pat = re.compile(r'^\s*(?:fu|fun|func|funct|functi|functio|function)\b')
+while idx >= 0:
+    idx -= 1
+    line = buf[idx]
+    if re.match(fun_pat, line):
+        idx = -1
+        break
+    if re.match(endfun_pat, line):
+        idx -= 1
+        line = buf[idx]
+        m = re.match(fun_pat, line)
+        while not m and idx >= 0:
+            idx -= 1
+            line = buf[idx]
+            m = re.match(fun_pat, line)
+    if re.match(var_pat, line):
+        col = line.index(var)
+        break
+else:
+    idx = -1
+vim.command("let lnr=%s" % (idx+1))
+vim.command("let col=%s" % (col+1))
+EOF
+if lnr
+    call setpos(".", [0, lnr, col, 0])
+endif
+endfun
+if has("python")
+    nnoremap gd :call LocalDefi(expand("<cword>"))<CR>
+endif
