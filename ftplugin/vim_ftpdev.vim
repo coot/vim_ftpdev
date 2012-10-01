@@ -542,6 +542,10 @@ nmap	[#	:call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]
 
 fun! <SID>Install(bang) "{{{1
 
+    if g:ftplugin_dir = g:ftplugin_installdir
+	return
+    endif
+
     exe 'lcd '.fnameescape(g:ftplugin_dir)
     
     if a:bang == "" 
