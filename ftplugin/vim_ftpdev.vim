@@ -5,7 +5,10 @@
 " Copyright: © Marcin Szamotulski, 2012
 " GetLatestVimScript: 3322 2 :AutoInstall: FTPDEV
 "
-" Todo: gd (search in current scope) and gD (search for global definition).
+" Todo: what to do with vim file and other files in $HOME directory?
+" Todo: b:ftplugin_dir, ... should be b:    - the opening different projects
+" in one vim instance will work.
+"
 " Copyright Statement: {{{1
 " 	  This file is a part of Automatic Tex Plugin for Vim.
 "
@@ -25,60 +28,70 @@
 "     This licence applies to all files shipped with Automatic Tex Plugin.
 
 
-"{{{1 GLOBAL VARIABLES
+"{{{1 VARIABLES
 let s:vim_dirs = [ "ftplugin", "plugin", "autoload", "compiler", "syntax",
 	\ "indent", "colors", "doc", "keymap", "lang", "macros", "print",
 	\ "spell", "tools", "tutor", ]
-if !exists("g:ftplugin_dir")
-    exe "lcd ".fnameescape(expand('%:p:h'))
-    echom expand("%:p:h").';'
-    let dir_path = ''
-    for dir in s:vim_dirs
-	let dir_path = fnamemodify(finddir(dir, expand("%:p:h").';'), ':p')
-	if !empty(dir_path)
-	    break
-	endif
-    endfor
-    if !empty(dir_path)
-	let g:ftplugin_dir = fnamemodify(dir_path, ':h:h')
+if !exists("b:ftplugin_dir")
+    if expand("%:p:h") == $HOME
+	let b:ftplugin_dir = $HOME
     else
-	let g:ftplugin_dir = expand("%:p:h")
+	exe "lcd ".fnameescape(expand('%:p:h'))
+	let dir_path = ''
+	for dir in s:vim_dirs
+	    let dir_path = fnamemodify(finddir(dir, expand("%:p:h").';'), ':p')
+	    if !empty(dir_path)
+		break
+	    endif
+	endfor
+	if !empty(dir_path)
+	    let b:ftplugin_dir = fnamemodify(dir_path, ':h:h')
+	else
+	    let b:ftplugin_dir = expand("%:p:h")
+	endif
+	lcd -
     endif
-    lcd -
 endif
 fun! FTPDEV_GetInstallDir()
     let time = reltime()
-    " lcd to g:ftplugin_dir, we want path to be relative to this directory.
-    exe 'lcd '.fnameescape(g:ftplugin_dir) 
+    " lcd to b:ftplugin_dir, we want path to be relative to this directory.
+    exe 'lcd '.fnameescape(b:ftplugin_dir) 
     " Check only vim files:
     let files = map(filter(split(globpath('.', '**'), '\n'), 'fnamemodify(v:val, ":e") == "vim"'), 'v:val[2:]')
-    let g:files = copy(files)
     lcd -
     " Good files to check are those in s:vim_dirs:
     " i.e. in plugin, ftplugin, ... directories.
     let gfiles = []
-    let g:time1 = reltimestr(reltime(time))
     for file in files
 	if file =~ '^\%('.join(s:vim_dirs, '\|').'\)\>'
 	    call add(gfiles, file)
 	endif
     endfor
-    let g:files1 = copy(files)
-    let g:time2 = reltimestr(reltime(time))
     if len(gfiles)
 	let files = gfiles
     endif
-    let g:gfiles = copy(gfiles)
     " ipath - install path
     let ipath = ''
     for file in files
 	" Find each file in 'runtimepath'
-	let ipath = globpath(&rtp, file)
+	let ipaths = split(globpath(&rtp, file), "\n")
+	if len(ipaths) == 1
+	    let ipath = ipaths[0]
+	elseif len(ipaths) >= 2
+	    echohl WarningMsg
+	    echom "Plugin script: \"".file."\" is installed in different locations at your 'runtimepath':"
+	    echohl Normal
+	    for ipath in ipaths
+		echom ipath
+	    endfor
+	    let ipath = ""
+	else
+	    let ipath = ""
+	endif
 	if !empty(ipath)
 	    break
 	endif
     endfor
-    let g:time3 = reltimestr(reltime(time))
     " Get the install path, count the directory level of file and strip that
     " many directories from the corresponing ipath. This should be the install
     " path.
@@ -87,36 +100,37 @@ fun! FTPDEV_GetInstallDir()
 	let idx += 1
 	let file = fnamemodify(file, ':h')
     endwhile
-    let ipath = fnamemodify(ipath, repeat(':h', idx))
-    let g:time4 = reltimestr(reltime(time))
+    let ipath = fnamemodify(fnamemodify(ipath, repeat(':h', idx)), ':p')
     return ipath
 endfun
-if !exists("g:ftplugin_installdir")
-    let dir = FTPDEV_GetInstallDir()
-    if !empty(dir)
-	let g:ftplugin_installdir = dir
+if !exists("b:ftplugin_installdir")
+    if expand("%:p:h") == $HOME
+	let b:ftplugin_installdir = $HOME
     else
-	let g:ftplugin_installdir = split(&rtp, ',')[0]
+	let dir = FTPDEV_GetInstallDir()
+	if !empty(dir)
+	    let b:ftplugin_installdir = dir
+	else
+	    let b:ftplugin_installdir = split(&rtp, ',')[0]
+	endif
     endif
 endif
 	    
-
-
 if !exists("g:ftplugin_notinstall")
     let g:ftplugin_notinstall=['Makefile', '\.tar\%(\.bz2\|\.gz\)\?$', '\.vba$', '.*\.vmb$']
 endif
 if exists("g:ftplugin_ResetPath") && g:ftplugin_ResetPath == 1
-    au! BufEnter *.vim exe "setl path=".substitute(g:ftplugin_dir.",".join(filter(split(globpath(g:ftplugin_dir, '**'), "\n"), "isdirectory(v:val)"), ","), " ", '\\\\\\\ ', 'g')
+    au! BufEnter *.vim exe "setl path=".substitute(b:ftplugin_dir.",".join(filter(split(globpath(b:ftplugin_dir, '**'), "\n"), "isdirectory(v:val)"), ","), " ", '\\\\\\\ ', 'g')
 else
     func! FTPDEV_AddPath()
 	let path=map(split(&path, ','), "fnamemodify(v:val, ':p')")
-	if index(path,fnamemodify(g:ftplugin_dir, ":p")) == -1 && g:ftplugin_dir != ""
-	    let add = join(filter(split(globpath(g:ftplugin_dir, '**'), "\n"), "isdirectory(v:val)"), ",")
+	if index(path,fnamemodify(b:ftplugin_dir, ":p")) == -1 && b:ftplugin_dir != ""
+	    let add = join(filter(split(globpath(b:ftplugin_dir, '**'), "\n"), "isdirectory(v:val)"), ",")
 	    let add = substitute(add, " ", '\\\\\\\ ', 'g')
 	    exe "setl path+=".add
 	endif
     endfun
-    exe "au! BufEnter ".g:ftplugin_dir."* call FTPDEV_AddPath()"
+    exe "au! BufEnter ".b:ftplugin_dir."* call FTPDEV_AddPath()"
     exe "au! VimEnter * call FTPDEV_AddPath()"
 endif
 try
@@ -178,6 +192,18 @@ for filename in files:
                 break
             lnr += 1
             line = buf[lnr-1]
+	if what == 'variable':
+            # Skip over :fun until :endfun
+            if line.lstrip().startswith('fun'):
+                while not line.lstrip().startswith('endfun'):
+                    lnr += 1
+                    if lnr == buf_len:
+                        break
+                    line = buf[lnr-1]
+                if lnr == buf_len:
+                    break
+                lnr += 1
+                liner = buf[lnr-1]
         match = re.match(pat, line)
         if match:
             loclist.append({
@@ -217,7 +243,7 @@ fun! Goto(what,bang,...) "{{{1
 	if !has("python")
 	    let pattern 	= '^\s*let\s\+' . ( a:0 >=  1 ? pattern : '' )
 	else
-	    let cpat 		= '^\s*let\s\+\zs[^\s=]*'
+	    let cpat 		= '^\s*let\s\+\zs[^=]*\ze\s*='
 	    let pattern 	= ( a:0 >=  1 ? pattern : '' )
 	endif
     elseif a:what == 'maplhs'
@@ -235,7 +261,7 @@ fun! Goto(what,bang,...) "{{{1
     else
 	let pattern 		= '^\s*[ci]\=\%(\%(nore\|un\)a\%[bbrev]\|ab\%[breviate]\)' . ( a:0 >= 1 ? pattern : '' )
     endif
-    let files			= map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
+    let files			= map(split(globpath(b:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
     let filename		= join(files)
 
     if has("python")
@@ -294,7 +320,7 @@ endtry
 com! -buffer -bang -nargs=? -complete=customlist,FuncCompl Function 	:call Goto('function', <q-bang>, <q-args>) 
 try
 fun! FuncCompl(A,B,C) "{{{1
-    let files = map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
+    let files = map(split(globpath(b:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
     let filename = join(files)
     if has("python")
         let loclist = <SID>PyGrep('function', files)
@@ -323,7 +349,7 @@ catch /E127/
 endtry
 try
 fun! CommandCompl(A,B,C) "{{{1
-    let files = map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
+    let files = map(split(globpath(b:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
     let filename = join(files)
     if has("python")
         let loclist = <SID>PyGrep('command', files)
@@ -350,7 +376,7 @@ catch /E127/
 endtry
 try
 fun! MapRhsCompl(A,B,C) "{{{1
-    let files = map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
+    let files = map(split(globpath(b:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
     let filename = join(files)
     if has("python")
         let loclist = <SID>PyGrep('maprhs', files)
@@ -375,7 +401,7 @@ catch /E127/
 endtry
 try
 fun! MapLhsCompl(A,B,C) "{{{1
-    let files = map(split(globpath(g:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
+    let files = map(split(globpath(b:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
     let filename = join(files)
     if has("python")
         let loclist = <SID>PyGrep('maplhs', files)
@@ -397,7 +423,7 @@ endfun
 catch /E127/
 endtry "}}}1
 com! -buffer -bang -nargs=? -complete=custom,CommandCompl 	Command 	:call Goto('command', <q-bang>, <q-args>) 
-com! -buffer -bang -nargs=?  			     	Variable 	:call Goto('variable', <q-bang>, <q-args>) 
+com! -buffer -bang -nargs=?  			     	        Variable 	:call Goto('variable', <q-bang>, <q-args>) 
 com! -buffer -bang -nargs=? -complete=custom,MapLhsCompl 	MapLhs 		:call Goto('maplhs', <q-bang>, <q-args>) 
 com! -buffer -bang -nargs=? -complete=customlist,MapRhsCompl 	MapRhs 		:call Goto('maprhs', <q-bang>, <q-args>) 
 
@@ -484,16 +510,16 @@ nmap <silent> <buffer> gn 				:call SearchInFunction(@/,( v:searchforward ? '' :
 nmap <silent> <buffer> gN				:call SearchInFunction(@/,(!v:searchforward ? '' : 'b'))<CR>
 fun! <SID>PluginDir(...) "{{{1
     if a:0 == 0 
-	echo g:ftplugin_dir
+	echo b:ftplugin_dir
     else
-	let g:ftplugin_dir=a:1
+	let b:ftplugin_dir=a:1
     endif
 endfun "}}}1
 com! -nargs=? -complete=file PluginDir	:call <SID>PluginDir(<f-args>)
 
 try
 fun! Pgrep(vimgrep_arg) "{{{1
-    let filename	= join(filter(map(split(globpath(g:ftplugin_dir, '**/*'), "\n"), "fnameescape(v:val)"),"!isdirectory(v:val)"))
+    let filename	= join(filter(map(split(globpath(b:ftplugin_dir, '**/*'), "\n"), "fnameescape(v:val)"),"!isdirectory(v:val)"))
     try
 	execute "lvimgrep " . a:vimgrep_arg . " " . filename 
     catch /E480:/
@@ -555,24 +581,23 @@ nmap	]#	:call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]
 nmap	[#	:call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]*\<\zsendif\>', 'b')<CR>
 
 fun! <SID>Install(bang) "{{{1
-
-    if g:ftplugin_dir = g:ftplugin_installdir
+    if b:ftplugin_dir == b:ftplugin_installdir
 	return
     endif
 
-    exe 'lcd '.fnameescape(g:ftplugin_dir)
+    exe 'lcd '.fnameescape(b:ftplugin_dir)
     
     if a:bang == "" 
 	" Note: this returns non zero list if the buffer is loaded
 	" ':h getbufline()'
 	let file_name = expand('%:.')
 	let file = getbufline('%', '1', '$')
-	let install_path = substitute(g:ftplugin_installdir, '\/\s*$', '', '').'/'.file_name
+	let install_path = substitute(b:ftplugin_installdir, '\/\s*$', '', '').'/'.file_name
 	call writefile(file, install_path)
 	echom 'File installed to: "'.install_path.'".'
     else
-	let install_path = substitute(g:ftplugin_installdir, '\/\s*$', '', '')
-	let file_list = filter(split(globpath(g:ftplugin_dir, '**'), "\n"), "!isdirectory(v:val) && !Match(g:ftplugin_notinstall, fnamemodify(v:val, ':.'))")
+	let install_path = substitute(b:ftplugin_installdir, '\/\s*$', '', '')
+	let file_list = filter(split(globpath(b:ftplugin_dir, '**'), "\n"), "!isdirectory(v:val) && !Match(g:ftplugin_notinstall, fnamemodify(v:val, ':.'))")
 	for file in file_list
 	    if bufloaded(file)
 		let file_list = getbufline(file, '1', '$')
@@ -640,6 +665,82 @@ fun! Evaluate(mode) "{{{1
 endfun
 com! -buffer -range Eval	:call Evaluate(mode())
 "}}}1
+fun! <SID>LocalDeclaration(variable) "{{{1
+mark '
+python << EOF
+import vim
+import re
+
+var = vim.eval('a:variable')
+gvar = var.startswith("s:") or var.startswith("g:")
+buf = vim.current.buffer
+idx = vim.current.window.cursor[0]-1
+col = vim.current.window.cursor[1]
+
+var_pat = re.compile(r'^(\s*let\s*)%s\b' % var)
+endfun_pat = re.compile(r'^\s*(?:endf|endfu|endfun|endfunc|endfunct|endfuncti|endfunctio|endfunction)\b')
+fun_pat = re.compile(r'^\s*(?:fu|fun|func|funct|functi|functio|function)\b')
+
+def jump(idx): # {{{2
+    global buf
+    while idx >= 0:
+        idx -= 1
+        line = buf[idx]
+        if re.match(fun_pat, line) and not gvar:
+            idx = -1
+            return (-1, -1)
+        if re.match(endfun_pat, line):
+            idx -= 1
+            line = buf[idx]
+            m = re.match(fun_pat, line)
+            while not m and idx >= 0:
+                idx -= 1
+                line = buf[idx]
+                m = re.match(fun_pat, line)
+        if re.match(var_pat, line):
+            col = line.index(var)
+            return (idx, col)
+    else:
+        return (-1, -1) # }}}2
+
+(n_idx, n_col) = jump(idx)
+while n_idx != -1:
+    (idx, col) = (n_idx, n_col)
+    (n_idx, n_col) = jump(idx)
+
+vim.command("let lnr=%s" % (idx+1))
+vim.command("let col=%s" % (col+1))
+EOF
+if lnr
+    call setpos(".", [0, lnr, col, 0])
+endif
+endfun
+if has("python")
+    nnoremap <silent> gd :call <SID>LocalDeclaration(expand("<cword>"))<CR>
+endif
+" }}}1
+" Global Declaration {{{1
+try
+fun! <SID>GlobalDeclaration(word)
+    mark '
+    let g:word = a:word
+    let line = getline(line("."))
+    let line = line
+    let lword = matchstr(line, '\zs\w\+\ze\s\+\%(:\|\w\)*$')
+    if line[col("."):] =~ '\w*(' || line[:col(".")] =~ 'call'
+        let what = 'function'
+    elseif line[:col(".")] =~ '^\s*\w*$'
+        let what = 'command'
+    else
+        let what = 'variable'
+    endif
+    let g:what = what
+    call Goto(what, "", a:word)
+endfunc
+catch /E127/
+endtry
+nnoremap <silent> gD :call <SID>GlobalDeclaration(expand("<cword>"))<CR>
+" }}}1
 " Print table tools:
 fun! <SID>FormatListinColumns(list,s) "{{{1
     " take a list and reformat it into many columns
@@ -680,56 +781,3 @@ fun! <SID>PrintTable(list, spaces) "{{{1
     return atplib#Table(list, spaces_list)
 endfun
 
-fun! <SID>LocalDeclaration(variable) "{{{1
-python << EOF
-import vim
-import re
-
-var = vim.eval('a:variable')
-buf = vim.current.buffer
-idx = vim.current.window.cursor[0]-1
-col = vim.current.window.cursor[1]
-
-var_pat = re.compile(r'^(\s*let\s*)%s\b' % var)
-endfun_pat = re.compile(r'^\s*(?:endf|endfu|endfun|endfunc|endfunct|endfuncti|endfunctio|endfunction)\b')
-fun_pat = re.compile(r'^\s*(?:fu|fun|func|funct|functi|functio|function)\b')
-
-def jump(idx): # {{{2
-    global buf
-    while idx >= 0:
-        idx -= 1
-        line = buf[idx]
-        if re.match(fun_pat, line):
-            idx = -1
-            return (-1, -1)
-        if re.match(endfun_pat, line):
-            idx -= 1
-            line = buf[idx]
-            m = re.match(fun_pat, line)
-            while not m and idx >= 0:
-                idx -= 1
-                line = buf[idx]
-                m = re.match(fun_pat, line)
-        if re.match(var_pat, line):
-            col = line.index(var)
-            return (idx, col)
-    else:
-        return (-1, -1) # }}}2
-
-(n_idx, n_col) = jump(idx)
-while n_idx != -1:
-    (idx, col) = (n_idx, n_col)
-    (n_idx, n_col) = jump(idx)
-
-vim.command("let lnr=%s" % (idx+1))
-vim.command("let col=%s" % (col+1))
-EOF
-let g:lnr = lnr
-let g:col = col
-if lnr
-    call setpos(".", [0, lnr, col, 0])
-endif
-endfun
-if has("python")
-    nnoremap <silent> gd :call <SID>LocalDeclaration(expand("<cword>"))<CR>
-endif
