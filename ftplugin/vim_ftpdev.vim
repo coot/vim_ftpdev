@@ -36,29 +36,38 @@ if !exists("b:ftplugin_dir")
     if expand("%:p:h") == $HOME
 	let b:ftplugin_dir = $HOME
     else
-	exe "lcd ".fnameescape(expand('%:p:h'))
-	let dir_path = ''
-	for dir in s:vim_dirs
-	    let dir_path = fnamemodify(finddir(dir, expand("%:p:h").';'), ':p')
+	try
+	    " XXX: Fugitive ... :Gdiff
+	    exe "lcd ".fnameescape(expand('%:p:h'))
+	    let dir_path = ''
+	    for dir in s:vim_dirs
+		let dir_path = fnamemodify(finddir(dir, expand("%:p:h").';'), ':p')
+		if !empty(dir_path)
+		    break
+		endif
+	    endfor
 	    if !empty(dir_path)
-		break
+		let b:ftplugin_dir = fnamemodify(dir_path, ':h:h')
+	    else
+		let b:ftplugin_dir = expand("%:p:h")
 	    endif
-	endfor
-	if !empty(dir_path)
-	    let b:ftplugin_dir = fnamemodify(dir_path, ':h:h')
-	else
+	    lcd -
+	catch /E472/
 	    let b:ftplugin_dir = expand("%:p:h")
-	endif
-	lcd -
+	endtry
     endif
 endif
 fun! FTPDEV_GetInstallDir()
     let time = reltime()
     " lcd to b:ftplugin_dir, we want path to be relative to this directory.
-    exe 'lcd '.fnameescape(b:ftplugin_dir) 
-    " Check only vim files:
-    let files = map(filter(split(globpath('.', '**'), '\n'), 'fnamemodify(v:val, ":e") == "vim"'), 'v:val[2:]')
-    lcd -
+    try
+	exe 'lcd '.fnameescape(b:ftplugin_dir) 
+	" Check only vim files:
+	let files = map(filter(split(globpath('.', '**'), '\n'), 'fnamemodify(v:val, ":e") == "vim"'), 'v:val[2:]')
+	lcd -
+    catch /E472/
+	return expand("%:p:h")
+    endtry
     " Good files to check are those in s:vim_dirs:
     " i.e. in plugin, ftplugin, ... directories.
     let gfiles = []
@@ -124,14 +133,16 @@ if exists("g:ftplugin_ResetPath") && g:ftplugin_ResetPath == 1
 else
     func! FTPDEV_AddPath()
 	let path=map(split(&path, ','), "fnamemodify(v:val, ':p')")
-	if index(path,fnamemodify(b:ftplugin_dir, ":p")) == -1 && b:ftplugin_dir != ""
+	if exists("b:ftplugin_dir") && index(path,fnamemodify(b:ftplugin_dir, ":p")) == -1 && b:ftplugin_dir != ""
 	    let add = join(filter(split(globpath(b:ftplugin_dir, '**'), "\n"), "isdirectory(v:val)"), ",")
 	    let add = substitute(add, " ", '\\\\\\\ ', 'g')
 	    exe "setl path+=".add
 	endif
     endfun
-    exe "au! BufEnter ".b:ftplugin_dir."* call FTPDEV_AddPath()"
-    exe "au! VimEnter * call FTPDEV_AddPath()"
+    if exists("b:ftplugin_dir")
+	exe "au! BufEnter ".b:ftplugin_dir."* call FTPDEV_AddPath()"
+	exe "au! VimEnter * call FTPDEV_AddPath()"
+    endif
 endif
 try
 "1}}}
