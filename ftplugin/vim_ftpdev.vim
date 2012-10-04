@@ -4,29 +4,10 @@
 " License: vim-license, see ':help license'
 " Copyright: © Marcin Szamotulski, 2012
 " GetLatestVimScript: 3322 2 :AutoInstall: FTPDEV
-"
-" Todo: what to do with vim file and other files in $HOME directory?
-" Todo: b:ftplugin_dir, ... should be b:    - the opening different projects
-" in one vim instance will work.
-"
-" Copyright Statement: {{{1
-" 	  This file is a part of Automatic Tex Plugin for Vim.
-"
-"     Automatic Tex Plugin for Vim is free software: you can redistribute it
-"     and/or modify it under the terms of the GNU General Public License as
-"     published by the Free Software Foundation, either version 3 of the
-"     License, or (at your option) any later version.
-" 
-"     Automatic Tex Plugin for Vim is distributed in the hope that it will be
-"     useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-"     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-"     General Public License for more details.
-" 
-"     You should have received a copy of the GNU General Public License along
-"     with Automatic Tex Plugin for Vim.  If not, see <http://www.gnu.org/licenses/>.
-"
-"     This licence applies to all files shipped with Automatic Tex Plugin.
 
+if (expand("%:t") == ".vimrc" || expand("%:t") == "_vimrc")
+    finish
+endif
 
 "{{{1 VARIABLES
 let s:vim_dirs = [ "ftplugin", "plugin", "autoload", "compiler", "syntax",
@@ -54,7 +35,6 @@ if !exists("b:ftplugin_dir")
 		    break
 		endif
 	    endfor
-	    let g:dir_path = dir_path
 	    if !empty(dir_path)
 		let b:ftplugin_dir = fnamemodify(dir_path, ':h:h')
 	    else
@@ -122,7 +102,7 @@ fun! FTPDEV_GetInstallDir() " {{{
     return ipath
 endfun "}}}
 if !exists("b:ftplugin_installdir")
-    if index(s:vim_dirs, expand("%:p:h:t")) == -1
+    if empty(dir_path)
 	let b:ftplugin_installdir = split(&rtp, ',')[0] 
 	echohl WarningMsg
 	echom "[ftpdev warning]: b:ftplugin_installdir=\"".b:ftplugin_installdir."\""
