@@ -35,6 +35,14 @@ let s:vim_dirs = [ "ftplugin", "plugin", "autoload", "compiler", "syntax",
 if !exists("b:ftplugin_dir")
     if expand("%:p:h") == $HOME
 	let b:ftplugin_dir = $HOME
+	echohl WarningMsg
+	echom "[ftpdev warning]: b:ftplugin_dir=\"".b:ftplugin_dir."\""
+	echohl Normal
+    elseif expand("%:p:h:h") == '/' || expand("%:p:h:h") == $HOME
+	let b:ftplugin_dir = expand("%:p:h")
+	echohl WarningMsg
+	echom "[ftpdev warning]: b:ftplugin_dir=\"".b:ftplugin_dir."\""
+	echohl Normal
     else
 	try
 	    " XXX: Fugitive ... :Gdiff
@@ -46,6 +54,7 @@ if !exists("b:ftplugin_dir")
 		    break
 		endif
 	    endfor
+	    let g:dir_path = dir_path
 	    if !empty(dir_path)
 		let b:ftplugin_dir = fnamemodify(dir_path, ':h:h')
 	    else
@@ -57,7 +66,7 @@ if !exists("b:ftplugin_dir")
 	endtry
     endif
 endif
-fun! FTPDEV_GetInstallDir()
+fun! FTPDEV_GetInstallDir() " {{{
     let time = reltime()
     " lcd to b:ftplugin_dir, we want path to be relative to this directory.
     try
@@ -88,7 +97,7 @@ fun! FTPDEV_GetInstallDir()
 	    let ipath = ipaths[0]
 	elseif len(ipaths) >= 2
 	    echohl WarningMsg
-	    echom "Plugin script: \"".file."\" is installed in different locations at your 'runtimepath':"
+	    echom "[ftpdev warning]: plugin script: \"".file."\" is installed in different locations at your 'runtimepath':"
 	    echohl Normal
 	    for ipath in ipaths
 		echom ipath
@@ -111,10 +120,13 @@ fun! FTPDEV_GetInstallDir()
     endwhile
     let ipath = fnamemodify(fnamemodify(ipath, repeat(':h', idx)), ':p')
     return ipath
-endfun
+endfun "}}}
 if !exists("b:ftplugin_installdir")
-    if expand("%:p:h") == $HOME
-	let b:ftplugin_installdir = $HOME
+    if index(s:vim_dirs, expand("%:p:h:t")) == -1
+	let b:ftplugin_installdir = split(&rtp, ',')[0] 
+	echohl WarningMsg
+	echom "[ftpdev warning]: b:ftplugin_installdir=\"".b:ftplugin_installdir."\""
+	echohl Normal
     else
 	let dir = FTPDEV_GetInstallDir()
 	if !empty(dir)
@@ -478,10 +490,10 @@ fun! SearchInFunction(pattern, flag) "{{{1
     endif
 
     if msg != ""
-	    echohl WarningMsg
+	echohl WarningMsg
 	redraw
 	exe "echomsg '".msg."'"
-	    echohl Normal
+	echohl Normal
     endif
 endfun
 fun! <SID>GetSearchArgs(Arg,flags) "{{{1
@@ -506,7 +518,7 @@ fun! Search(Arg) "{{{1
     if pattern == ""
 	echohl ErrorMsg
 	redraw
-	echomsg "Enclose the pattern with /.../"
+	echomsg "[ftpdev error]: enclose the pattern with /.../"
 	echohl Normal
 	return
     endif
@@ -605,7 +617,7 @@ fun! <SID>Install(bang) "{{{1
 	let file = getbufline('%', '1', '$')
 	let install_path = substitute(b:ftplugin_installdir, '\/\s*$', '', '').'/'.file_name
 	call writefile(file, install_path)
-	echom 'File installed to: "'.install_path.'".'
+	echom '[ftpdev]: file installed to: "'.install_path.'".'
     else
 	let install_path = substitute(b:ftplugin_installdir, '\/\s*$', '', '')
 	let file_list = filter(split(globpath(b:ftplugin_dir, '**'), "\n"), "!isdirectory(v:val) && !Match(g:ftplugin_notinstall, fnamemodify(v:val, ':.'))")
@@ -622,7 +634,7 @@ fun! <SID>Install(bang) "{{{1
 	    catch /E482/
 		let dir = fnamemodify(install_path.'/'.file_name, ':h')
 		echohl WarningMsg
-		echom 'Making directory "'.dir.'"'
+		echom '[ftpdev warning]: making directory "'.dir.'"'
 		echohl None
 		call mkdir(dir, 'p')
 		call writefile(file_list, install_path.'/'.file_name)
