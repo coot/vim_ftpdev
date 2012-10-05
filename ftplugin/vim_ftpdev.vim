@@ -13,8 +13,11 @@ endif
 let s:vim_dirs = [ "ftplugin", "plugin", "autoload", "compiler", "syntax",
 	\ "indent", "colors", "doc", "keymap", "lang", "macros", "print",
 	\ "spell", "tools", "tutor", ]
+let dir_path = ''
 if !exists("b:ftplugin_dir")
-    if expand("%:p:h") == $HOME
+    if expand("%:t") == "[Command Line]" 
+	let b:ftplugin_dir = ''
+    elseif expand("%:p:h") == $HOME
 	let b:ftplugin_dir = $HOME
 	echohl WarningMsg
 	echom "[ftpdev warning]: b:ftplugin_dir=\"".b:ftplugin_dir."\""
@@ -28,7 +31,6 @@ if !exists("b:ftplugin_dir")
 	try
 	    " XXX: Fugitive ... :Gdiff
 	    exe "lcd ".fnameescape(expand('%:p:h'))
-	    let dir_path = ''
 	    for dir in s:vim_dirs
 		let dir_path = fnamemodify(finddir(dir, expand("%:p:h").';'), ':p')
 		if !empty(dir_path)
@@ -45,6 +47,8 @@ if !exists("b:ftplugin_dir")
 	    let b:ftplugin_dir = expand("%:p:h")
 	endtry
     endif
+else
+    let dir_path = b:ftplugin_dir
 endif
 fun! FTPDEV_GetInstallDir() " {{{
     let time = reltime()
@@ -102,7 +106,9 @@ fun! FTPDEV_GetInstallDir() " {{{
     return ipath
 endfun "}}}
 if !exists("b:ftplugin_installdir")
-    if empty(dir_path)
+    if expand("%:t") == "[Command Line]" 
+	let b:ftplugin_installdir = ''
+    elseif empty(dir_path)
 	let b:ftplugin_installdir = split(&rtp, ',')[0] 
 	echohl WarningMsg
 	echom "[ftpdev warning]: b:ftplugin_installdir=\"".b:ftplugin_installdir."\""
@@ -584,7 +590,9 @@ nmap	]#	:call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]
 nmap	[#	:call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]*\<\zsendif\>', 'b')<CR>
 
 fun! <SID>Install(bang) "{{{1
-    if b:ftplugin_dir == b:ftplugin_installdir
+    if b:ftplugin_dir == b:ftplugin_installdir || 
+	    \ empty(b:ftplugin_installdir) || 
+	    \ a:bang == "!" && empty(b:ftplugin_dir)
 	return
     endif
 
