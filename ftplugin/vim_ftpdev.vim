@@ -1,9 +1,11 @@
 " Title:  Vim filetype plugin file
 " Author: Marcin Szamotulski
 " Email:  mszamot [AT] gmail [DOT] com
+" GitHub: https://github.com/coot/ftpdev_vim.git
 " License: vim-license, see ':help license'
 " Copyright: © Marcin Szamotulski, 2012
-" GetLatestVimScript: 3322 2 :AutoInstall: FTPDEV
+
+" Todo: installing doc.
 
 if (expand("%:t") == ".vimrc" || expand("%:t") == "_vimrc")
     finish
@@ -121,6 +123,14 @@ if !exists("b:ftplugin_installdir")
 	    let b:ftplugin_installdir = split(&rtp, ',')[0]
 	endif
     endif
+endif
+if b:ftplugin_dir != b:ftplugin_installdir &&
+            \ finddir(".vim", b:ftplugin_dir.";") == "" &&
+            \ finddir("_vim", b:ftplugin_dir.";") == "" &&
+            \ stridx(b:ftplugin_dir, $VIM) != 0
+    let b:ftplugin_autoinstall = 1
+else
+    let b:ftplugin_autoinstall = 0
 endif
 	    
 if !exists("g:ftplugin_notinstall")
@@ -586,15 +596,20 @@ fun! ListCommands(bang) "{{{1
 endfun
 com! -bang ListCommands 	:echo ListCommands(<q-bang>)
 
-nmap	]#	:call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]*\<\zsendif\>')<CR>
-nmap	[#	:call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]*\<\zsendif\>', 'b')<CR>
+nmap <silent> ]# :call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]*\<\zsendif\>')<CR>
+nmap <silent> [# :call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]*\<\zsendif\>', 'b')<CR>
 
-fun! <SID>Install(bang) "{{{1
+fun! <SID>Install(bang, ...) "{{{1
+    if !exists("b:ftplugin_dir") || !exists("b:ftplugin_dir")
+	return
+    endif
     if b:ftplugin_dir == b:ftplugin_installdir || 
 	    \ empty(b:ftplugin_installdir) || 
 	    \ a:bang == "!" && empty(b:ftplugin_dir)
 	return
     endif
+
+    let silent = ( a:0 >= 1 ? a:1 : 0 )
 
     exe 'lcd '.fnameescape(b:ftplugin_dir)
     
@@ -616,7 +631,9 @@ fun! <SID>Install(bang) "{{{1
 		let file_list = readfile(file)
 	    endif
 	    let file_name = fnamemodify(file, ':.')
-	    echo 'Installing: "'.file_name.'" to "'.install_path.'/'.file_name.'"'
+            if !silent
+                echo 'Installing: "'.file_name.'" to "'.install_path.'/'.file_name.'"'
+            endif
 	    try
 		call writefile(file_list, install_path.'/'.file_name)
 	    catch /E482/
@@ -631,6 +648,19 @@ fun! <SID>Install(bang) "{{{1
     endif
     lcd -
 endfun
+let b:x=1
+" Autoinstall:{{{1
+fun! FTPDEV_AutoInstall()
+    let b:x += 1
+    if exists("b:ftplugin_autoinstall") && b:ftplugin_autoinstall && b:ftplugin_autoinstall != 'no'
+        call <SID>Install("", ( b:ftplugin_autoinstall =~ 'sil\%[ent]' ? 1 : 0 ))
+    endif
+endfun
+augroup FTPDEV_AutoInstall
+    au!
+    au BufWritePost *.vim :call FTPDEV_AutoInstall()
+    " au BufWritePost *.txt :call FTPDEV_AutoInstallDoc()
+augroup END
 fun! Match(pattern_list, element) "{{{2
     let match = 0
     for pattern in a:pattern_list
@@ -641,7 +671,7 @@ fun! Match(pattern_list, element) "{{{2
     endfor
     return match
 endfun "}}}2
-com! -bang Install 	:call <SID>Install(<q-bang>)
+com! -bang Install :call <SID>Install(<q-bang>)
 
 fun! Evaluate(mode) "{{{1
     let saved_pos	= getpos(".")
