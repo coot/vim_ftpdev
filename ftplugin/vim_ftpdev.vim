@@ -6,41 +6,51 @@
 " Copyright: © Marcin Szamotulski, 2012
 
 " Todo: installing doc.
+" Todo: [count]]f go to line [count] of the current function (useful when
+" debuging functions).
 
 if (expand("%:t") == ".vimrc" || expand("%:t") == "_vimrc")
     finish
 endif
 
 "{{{1 VARIABLES
+" script variables {{{2
 let s:vim_dirs = [ "ftplugin", "plugin", "autoload", "compiler", "syntax",
 	\ "indent", "colors", "doc", "keymap", "lang", "macros", "print",
-	\ "spell", "tools", "tutor", ]
-let dir_path = ''
+	\ "spell", "tools", "tutor", "after", ]
+let s:dir_path = ''
+" b:ftplugin_dir {{{2
 if !exists("b:ftplugin_dir")
     if expand("%:t") == "[Command Line]" 
 	let b:ftplugin_dir = ''
     elseif expand("%:p:h") == $HOME
-	let b:ftplugin_dir = $HOME
-	echohl WarningMsg
-	echom "[ftpdev warning]: b:ftplugin_dir=\"".b:ftplugin_dir."\""
-	echohl Normal
+	let b:ftplugin_dir = ''
+	if !exists("b:ftplugin_installdir")
+	    let b:ftplugin_installdir = ''
+	endif
+    elseif !empty(finddir('cream', expand('%:p:h').';'))
+	" Cream on Linux:
+	let b:ftplugin_dir = finddir('cream', expand('%:p:h').';')
+	if !exists("b:ftplugin_installdir")
+	    let b:ftplugin_installdir = ''
+	endif
     elseif expand("%:p:h:h") == '/' || expand("%:p:h:h") == $HOME
-	let b:ftplugin_dir = expand("%:p:h")
-	echohl WarningMsg
-	echom "[ftpdev warning]: b:ftplugin_dir=\"".b:ftplugin_dir."\""
-	echohl Normal
+	let b:ftplugin_dir = ''
+	if !exists("b:ftplugin_installdir")
+	    let b:ftplugin_installdir = ''
+	endif
     else
 	try
 	    " XXX: Fugitive ... :Gdiff
 	    exe "lcd ".fnameescape(expand('%:p:h'))
 	    for dir in s:vim_dirs
-		let dir_path = fnamemodify(finddir(dir, expand("%:p:h").';'), ':p')
-		if !empty(dir_path)
+		let s:dir_path = finddir(dir, expand("%:p:h").';')
+		if !empty(s:dir_path)
 		    break
 		endif
 	    endfor
-	    if !empty(dir_path)
-		let b:ftplugin_dir = fnamemodify(dir_path, ':h:h')
+	    if !empty(s:dir_path)
+		let b:ftplugin_dir = fnamemodify(s:dir_path, ':h')
 	    else
 		let b:ftplugin_dir = expand("%:p:h")
 	    endif
@@ -50,10 +60,17 @@ if !exists("b:ftplugin_dir")
 	endtry
     endif
 else
-    let dir_path = b:ftplugin_dir
+    let s:dir_path = b:ftplugin_dir
 endif
-fun! FTPDEV_GetInstallDir() " {{{
+
+" b:ftplugin_installdir {{{2
+fun! FTPDEV_GetInstallDir() " {{{3
     let time = reltime()
+    if !filewritable(expand('%:p'))
+	return ''
+    elseif stridx(expand('%:p:h'), '/usr/share') == 0 || stridx(expand('%:p:h')[3:], 'Program Files') == 0
+	return ''
+    endif
     " lcd to b:ftplugin_dir, we want path to be relative to this directory.
     try
 	exe 'lcd '.fnameescape(b:ftplugin_dir) 
@@ -99,6 +116,9 @@ fun! FTPDEV_GetInstallDir() " {{{
     " Get the install path, count the directory level of file and strip that
     " many directories from the corresponing ipath. This should be the install
     " path.
+    if empty(ipath)
+	return ''
+    endif
     let idx = 0
     while file != "."
 	let idx += 1
@@ -106,36 +126,27 @@ fun! FTPDEV_GetInstallDir() " {{{
     endwhile
     let ipath = fnamemodify(fnamemodify(ipath, repeat(':h', idx)), ':p')
     return ipath
-endfun "}}}
+endfun " }}}3
 if !exists("b:ftplugin_installdir")
-    if expand("%:t") == "[Command Line]" 
+    if expand("%:t") == "[Command Line]" || 
+		\ empty(s:dir_path)
+	" s:dir_path is empty for Cream files under: "/usr/share/vim/cream".
 	let b:ftplugin_installdir = ''
-    elseif empty(dir_path)
-	let b:ftplugin_installdir = split(&rtp, ',')[0] 
-	echohl WarningMsg
-	echom "[ftpdev warning]: b:ftplugin_installdir=\"".b:ftplugin_installdir."\""
-	echohl Normal
     else
-	let dir = FTPDEV_GetInstallDir()
-	if !empty(dir)
-	    let b:ftplugin_installdir = dir
-	else
-	    let b:ftplugin_installdir = split(&rtp, ',')[0]
-	endif
+	let b:ftplugin_installdir = FTPDEV_GetInstallDir()
     endif
 endif
-if b:ftplugin_dir != b:ftplugin_installdir &&
-            \ finddir(".vim", b:ftplugin_dir.";") == "" &&
-            \ finddir("_vim", b:ftplugin_dir.";") == "" &&
-            \ stridx(b:ftplugin_dir, $VIM) != 0
-    let b:ftplugin_autoinstall = 1
-else
+
+" b:ftplugin_autoinstall {{{2
+if !exists("b:ftplugin_autoinstall")
     let b:ftplugin_autoinstall = 0
 endif
-	    
-if !exists("g:ftplugin_notinstall")
-    let g:ftplugin_notinstall=['Makefile', '\.tar\%(\.bz2\|\.gz\)\?$', '\.vba$', '.*\.vmb$']
+
+" g:ftplugin_noinstall {{{2
+if !exists("g:ftplugin_noinstall")
+    let g:ftplugin_noinstall=['Makefile', '\.tar\%(\.bz2\|\.gz\)\?$', '\.vba$', '.*\.vmb$']
 endif
+" g:ftplugin_ResetPath {{{2
 if exists("g:ftplugin_ResetPath") && g:ftplugin_ResetPath == 1
     au! BufEnter *.vim exe "setl path=".substitute(b:ftplugin_dir.",".join(filter(split(globpath(b:ftplugin_dir, '**'), "\n"), "isdirectory(v:val)"), ","), " ", '\\\\\\\ ', 'g')
 else
@@ -153,7 +164,7 @@ else
     endif
 endif
 try
-"1}}}
+"}}}1
 
 " Vim Settings: 
 " vim scripts written on windows works on Linux only if the EOF are dos or unix.
@@ -611,19 +622,30 @@ fun! <SID>Install(bang, ...) "{{{1
 
     let silent = ( a:0 >= 1 ? a:1 : 0 )
 
-    exe 'lcd '.fnameescape(b:ftplugin_dir)
+    exe 'cd '.fnameescape(b:ftplugin_dir)
     
     if a:bang == "" 
 	" Note: this returns non zero list if the buffer is loaded
 	" ':h getbufline()'
-	let file_name = expand('%:.')
 	let file = getbufline('%', '1', '$')
+	let file_name = expand('%:.')
 	let install_path = substitute(b:ftplugin_installdir, '\/\s*$', '', '').'/'.file_name
-	call writefile(file, install_path)
-	echom '[ftpdev]: file installed to: "'.install_path.'".'
+	try
+	    call writefile(file, install_path)
+	catch /E482/
+	    let dir = fnamemodify(install_path, ':h')
+	    echohl WarningMsg
+	    echom '[ftpdev warning]: making directory "'.dir.'"'
+	    echohl None
+	    call mkdir(dir, 'p')
+	    call writefile(file, install_path)
+	endtry
+	if !silent
+	    echom '[ftpdev]: file installed to: "'.install_path.'".'
+	endif
     else
 	let install_path = substitute(b:ftplugin_installdir, '\/\s*$', '', '')
-	let file_list = filter(split(globpath(b:ftplugin_dir, '**'), "\n"), "!isdirectory(v:val) && !Match(g:ftplugin_notinstall, fnamemodify(v:val, ':.'))")
+	let file_list = filter(split(globpath(b:ftplugin_dir, '**'), "\n"), "!isdirectory(v:val) && !Match(g:ftplugin_noinstall, fnamemodify(v:val, ':.'))")
 	for file in file_list
 	    if bufloaded(file)
 		let file_list = getbufline(file, '1', '$')
@@ -646,13 +668,13 @@ fun! <SID>Install(bang, ...) "{{{1
 	    endtry
 	endfor
     endif
-    lcd -
+    cd -
 endfun
-let b:x=1
-" Autoinstall:{{{1
+" Autoinstall: {{{1
 fun! FTPDEV_AutoInstall()
-    let b:x += 1
-    if exists("b:ftplugin_autoinstall") && b:ftplugin_autoinstall && b:ftplugin_autoinstall != 'no'
+    if exists("b:ftplugin_autoinstall") && (
+		\ type(b:ftplugin_autoinstall) == 1 && !empty(b:ftplugin_autoinstall) && b:ftplugin_autoinstall != 'no' ||
+		\ type(b:ftplugin_autoinstall) == 0 && b:ftplugin_autoinstall )
         call <SID>Install("", ( b:ftplugin_autoinstall =~ 'sil\%[ent]' ? 1 : 0 ))
     endif
 endfun
@@ -707,7 +729,7 @@ endfun
 com! -buffer -range Eval	:call Evaluate(mode())
 "}}}1
 fun! <SID>LocalDeclaration(variable) "{{{1
-mark '
+normal! m`
 python << EOF
 import vim
 import re
@@ -757,31 +779,57 @@ if lnr
 endif
 endfun
 if has("python")
-    nnoremap <silent> gd :call <SID>LocalDeclaration(expand("<cword>"))<CR>
+    nnoremap <silent> <buffer> gd :call <SID>LocalDeclaration(expand("<cword>"))<CR>
 endif
 " }}}1
 " Global Declaration {{{1
 try
 fun! <SID>GlobalDeclaration(word)
-    mark '
-    let g:word = a:word
+    normal! m`
     let line = getline(line("."))
-    let line = line
-    let lword = matchstr(line, '\zs\w\+\ze\s\+\%(:\|\w\)*$')
-    if line[col("."):] =~ '\w*(' || line[:col(".")] =~ 'call'
+    if line[(col(".")-1):] =~ '^\w\+(' ||
+		\ line[:col(".")] =~ 'call[^(]*$'
         let what = 'function'
-    elseif line[:col(".")] =~ '^\s*\w*$'
+    elseif line[:col(".")] =~ '^\s*\w*$' ||
+		\ line[:col(".")] =~ 'exe\%[cute]\s*[''"]\s*\w*$'
         let what = 'command'
     else
         let what = 'variable'
     endif
-    let g:what = what
     call Goto(what, "", a:word)
 endfunc
 catch /E127/
 endtry
-nnoremap <silent> gD :call <SID>GlobalDeclaration(expand("<cword>"))<CR>
+nnoremap <silent> <buffer> gD :call <SID>GlobalDeclaration(expand("<cword>"))<CR>
 " }}}1
+fun! FTPDEV_FunJump(forward, fun, count, ...) "{{{1
+    let visual = ( a:0 >= 1 ? a:1 : 0 )
+    if visual
+	normal! gv
+    endif
+    normal! m`
+    if a:forward
+	let flag = 'W'
+    else
+	let flag = 'bW'
+    endif
+    if a:fun
+	let pat = '^\s*\zsfu\%[nction]\>'
+    else
+	let pat = '^\s*\zsend\%[function]\>'
+    endif
+    for i in range(a:count)
+	call search(pat, flag)
+    endfor
+endfun
+"}}}1
+fun! <SID>FunLine(count) " {{{1
+    call FTPDEV_FunJump(0,1,1)
+    if a:count
+	exe "normal! ".a:count."j"
+    endif
+endfun " }}}1
+nnoremap <buffer> <silent> ]f  :<C-U>call <SID>FunLine(v:count)<CR>
 " Print table tools:
 fun! <SID>FormatListinColumns(list,s) "{{{1
     " take a list and reformat it into many columns

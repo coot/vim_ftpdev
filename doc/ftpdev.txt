@@ -18,6 +18,9 @@ NEWS							*ftpdev-news*
  |b:ftplugin_dir| and |b:ftplugin_installdir| instead of global variables. In
  this way you can work in one vim instance with several vim plugins.
 
+ |g:ftplugin_noinstall| instead of g:ftplugin_notinstall 
+ (it just sounds better :)
+
  NEW FEATURE: ~
 
  |ftpdev-gD| - search for global definition under the cursor: this works with
@@ -90,8 +93,8 @@ in my vimrc file via an autocommand: >
  does not contain it). 
  This makes the use of |edit|, |split|, |vsplit|, |diffsplit| a lot nicer.
 
-							*ftpdev-g:ftplugin_notinstall*
-g:ftplugin_notinstall=['Makefile', '.*\.tar\.\%(bz2\|gz\)$', '.*\.vba$']
+							*ftpdev-g:ftplugin_noinstall*
+g:ftplugin_noinstall=['Makefile', '.*\.tar\.\%(bz2\|gz\)$', '.*\.vba$']
 	This is list of patterns or file names relative to |b:ftplugin_dir|
 	which will not be installed by the |ftpdev-:Install| command.
 
@@ -225,12 +228,13 @@ map [#
 	This makes |lvimgrep| in all files under |ftpdev-b:ftplugin_dir|.  The
 	argument syntax is the same as for |lvimgrep|.
 
-This note is just for completeness:
-Vim has its own vim.vim ftplugin which defines: 
-	]] 	(next beginning of a function), 
-	][ 	(next end of a function), 
-	[[ 	(previous beginning of a function), 
-	[] 	(previous end of a function).
+							*ftpdev-]]* *ftpdev-[[*
+							*ftpdev-][* *ftpdev-][*
+These are normal and visual maps:
+[count]]] 	next beginning of a function, 
+[count]][ 	next end of a function, 
+[count][[ 	previous beginning of a function, 
+[count][] 	previous end of a function.
 	
 nmap Gn							*ftpdev-Gn*
 nmap GN							*ftpdev-GN*
@@ -250,7 +254,7 @@ INSTALLING PLUGIN TO THE RUNTIME PATH ~
 	under |b:ftplugin_installdir| be default it is first path that appear
 	in 'runtimepath' vim option.  With bang "!": it will install all the
 	files found under |b:ftplugin_dir| except the files in the
-	(file/pattern) list |g:ftplugin_notinstall|.
+	(file/pattern) list |g:ftplugin_noinstall|.
 
 	You can use this command in an autocommand for certain files: >
 		au BufWritePost <some_file>	:Install
