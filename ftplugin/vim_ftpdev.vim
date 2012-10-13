@@ -20,6 +20,9 @@ let s:vim_dirs = [ "ftplugin", "plugin", "autoload", "compiler", "syntax",
 	\ "spell", "tools", "tutor", "after", ]
 let s:dir_path = ''
 " b:ftplugin_dir {{{2
+fun! CompareLen(a1,a2)
+    return len(a:a2)-len(a:a1)
+endfun
 if !exists("b:ftplugin_dir")
     if expand("%:t") == "[Command Line]" 
 	let b:ftplugin_dir = ''
@@ -42,19 +45,24 @@ if !exists("b:ftplugin_dir")
     else
 	try
 	    " XXX: Fugitive ... :Gdiff
-	    exe "lcd ".fnameescape(expand('%:p:h'))
+	    exe "cd ".fnameescape(expand('%:p:h'))
+
+            " We have to go through all s:vim_dirs and find the best match
+            " (for pathogen, vam like plugins which put entries of &rtp inside
+            " ~/.vim directory)
+            let dirs = []
 	    for dir in s:vim_dirs
-		let s:dir_path = finddir(dir, expand("%:p:h").';')
-		if !empty(s:dir_path)
-		    break
-		endif
+		let dir_path = finddir(dir, expand("%:p:h").';')
+                call add(dirs, fnamemodify(dir_path, ":h"))
 	    endfor
+            call sort(dirs, "CompareLen")
+            let s:dir_path = get(dirs, 0, "")
 	    if !empty(s:dir_path)
-		let b:ftplugin_dir = fnamemodify(s:dir_path, ':h')
+		let b:ftplugin_dir = s:dir_path
 	    else
 		let b:ftplugin_dir = expand("%:p:h")
 	    endif
-	    lcd -
+	    cd -
 	catch /E472/
 	    let b:ftplugin_dir = expand("%:p:h")
 	endtry
@@ -71,12 +79,12 @@ fun! FTPDEV_GetInstallDir() " {{{3
     elseif stridx(expand('%:p:h'), '/usr/share') == 0 || stridx(expand('%:p:h')[3:], 'Program Files') == 0
 	return ''
     endif
-    " lcd to b:ftplugin_dir, we want path to be relative to this directory.
+    " :cd to b:ftplugin_dir, we want path to be relative to this directory.
     try
-	exe 'lcd '.fnameescape(b:ftplugin_dir) 
+	exe 'cd '.fnameescape(b:ftplugin_dir) 
 	" Check only vim files:
 	let files = map(filter(split(globpath('.', '**'), '\n'), 'fnamemodify(v:val, ":e") == "vim"'), 'v:val[2:]')
-	lcd -
+	cd -
     catch /E472/
 	return expand("%:p:h")
     endtry
@@ -176,6 +184,7 @@ fun! <SID>PyGrep(what, files) " {{{1
 python << EOF
 import vim
 import re
+import os.path
 import json
 
 what = vim.eval('a:what')
@@ -202,8 +211,15 @@ for filename in files:
     else:
         buf_nr = 0
 	# XXX: filename might be a directory!
-        with open(filename) as fo:
-            buf = fo.read().splitlines()
+	if not os.path.isdir(filename):
+            try:
+                with open(filename) as fo:
+                    buf = fo.read().splitlines()
+            except IOError as e:
+                print(e)
+                buf = ""
+        else:
+            buf = ""
 
     lnr = 0
     buf_len = len(buf)
@@ -291,8 +307,7 @@ fun! Goto(what,bang,...) "{{{1
     else
 	let pattern 		= '^\s*[ci]\=\%(\%(nore\|un\)a\%[bbrev]\|ab\%[breviate]\)' . ( a:0 >= 1 ? pattern : '' )
     endif
-    let files			= map(split(globpath(b:ftplugin_dir, '**/*vim'), "\n"), "fnameescape(v:val)")
-    let filename		= join(files)
+    let files			= split(globpath(b:ftplugin_dir, '**/*vim'), "\n")
 
     if has("python")
         call map(files, 'fnamemodify(v:val, ":p")')
@@ -317,6 +332,8 @@ fun! Goto(what,bang,...) "{{{1
             let error = 1
         endtry
     else
+        call map(files, "fnameescape(v:val)")
+        let filename = join(files)
 	let error = 0
         if !exists("s:loclist")
             try
@@ -828,8 +845,26 @@ fun! <SID>FunLine(count) " {{{1
     if a:count
 	exe "normal! ".a:count."j"
     endif
-endfun " }}}1
-nnoremap <buffer> <silent> ]f  :<C-U>call <SID>FunLine(v:count)<CR>
+endfun
+nnoremap <buffer> <silent> [f  :<c-u>call <sid>FunLine(v:count)<cr>
+" }}}1
+fun! <sid>EmbeddedLangLine(count) " {{{1
+    let c_pos = getpos(".")[1:2]
+    let f_pos = searchpos('^\(py\%[thon]\|py3\|python3\|pe\%[rl]\|lua\)\s\+<<', 'cbW')
+    let marker = matchstr(getline(line(".")), '^\(py\%[thon]\|py3\|python3\|pe\%[rl]\|lua\)\s\+<<\s*\zs\S*\ze')
+    call cursor(line("."), len(getline(line("."))))
+    let e_line = searchpos(marker, 'nW')[0]
+    call cursor(c_pos)
+    if e_line >= c_pos[0]
+	normal! m`
+	call cursor(f_pos)
+	if a:count 
+	    exe "normal! ".a:count."j"
+	endif
+    endif
+endfun!
+nnoremap <buffer> <silent> [l :<c-u>call <sid>EmbeddedLangLine(v:count)<cr>
+" }}}1
 " Print table tools:
 fun! <SID>FormatListinColumns(list,s) "{{{1
     " take a list and reformat it into many columns
@@ -864,9 +899,6 @@ fun! <SID>PrintTable(list, spaces) "{{{1
     let nr_of_columns = max(map(copy(list), 'len(v:val)'))
     let spaces_list = ( nr_of_columns == 1 ? [0] : map(range(1,nr_of_columns-1), 'a:spaces') )
 
-    let g:spaces_list = spaces_list
-    let g:nr_of_columns=nr_of_columns
-    
     return atplib#Table(list, spaces_list)
 endfun
 

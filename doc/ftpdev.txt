@@ -235,6 +235,13 @@ These are normal and visual maps:
 [count]][ 	next end of a function, 
 [count][[ 	previous beginning of a function, 
 [count][] 	previous end of a function.
+
+							*ftpdev-[f*
+[count][f	jump to [count] line of the current function.
+
+							*ftpdev-[l*
+[count][l	jump to [count] line of the current emebedded language
+		(|:lua|, |:perl|, |:python| and |:python3| (|:py3|) are supported).
 	
 nmap Gn							*ftpdev-Gn*
 nmap GN							*ftpdev-GN*
