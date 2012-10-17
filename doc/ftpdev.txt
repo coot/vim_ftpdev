@@ -117,7 +117,7 @@ COMMANDS AND MAPS					*ftpdev*
 SEARCHING COMMANDS ~
 							*ftpdev-:Function*
 :Function[!] {fname} [line]
-nmap gD (over func name)
+nmap gD {over-func-name}
 	This finds function with name matching {fname} vim pattern under the
 	|ftpdev-b:ftplugin_dir| directory. It uses the internal grep, i.e.
 	|lvimgrep|. {fname} should be as the first argument of |lvimgrep| except
@@ -142,10 +142,10 @@ nmap gD (over func name)
 
 							 *ftpdev-:Command*
 :Command[!] {cname} [line]
-nmap gD (over command name)
+nmap gD {over-command-name}
 	This finds command which name matches {fname} vim pattern under the
 	|ftpdev-b:ftplugin_dir| {cname} has the same syntax as {fname}. The
-	bang works as in |ftpdev-:Function|
+	bang works as in |ftpdev-:Function|.
 
 	There is a completion for {cname}s.
 	The [line] argument is the same as in |ftpdev-:Function|.
@@ -156,16 +156,17 @@ nmap gD (over command name)
 
 							*ftpdev-:Variable*
 :Variable[!] {vname} [line]
-nmap gD (over var name)
+nmap gD {over-var-name}
 	This finds variable definition matching {vname}. {vname} has to contain
 	the g: b: s: t: prefix if the variable has it. The bang works as in
-	|ftpdev-:Function|
+	|ftpdev-:Function|.
 	The [line] argument is the same as in |ftpdev-:Function|.
 
 							*ftpdev-:MapLhs*
 :MapLhs[!] {maplhs} [line]
-	This finds maps which lhs matches {maplhs} vim pattern. The bang works as in
-	|ftpdev-:Function|
+	This finds maps which lhs matches {maplhs} vim pattern. Can find
+	maps which are defined using |:execute|. The bang works as in
+	|ftpdev-:Function|.
 	The [line] argument is the same as in |ftpdev-:Function|.
 
 	If Vim has Python interface then you can use '^' in {maplhs} pattern
@@ -176,7 +177,7 @@ nmap gD (over var name)
 							*ftpdev-:MapRhs*
 :MapRhs[!] {maprhs} [line]
 	This finds maps which rhs matches {maprhs} vim pattern. The bang works as in
-	|ftpdev-:Function|
+	|ftpdev-:Function|.
 	The [line] argument is the same as in |ftpdev-:Function|.
 
 	{maprhs} works in the same way as {maplhs} argument of |atp-:MapLhs|
@@ -193,9 +194,9 @@ nmap gd
 
 							*ftpdev-gD*
 nmap gD
-	Jump to global definition of a variable, function or command under the
-	cursor (using |ftpdev-:Variable|, |ftpdev-:Function| or |ftpdev-:Command| 
-	ccommands).
+	Jump to global definition of a variable, function, command or map (if
+	starts with <plug> under the cursor (using |ftpdev-:Variable|,
+	|ftpdev-:Function|, |ftpdev-:Command| or |ftpdef-:MapLhs| commands).
 
 							*ftpdev-]#*
 							*ftpdev-[#*

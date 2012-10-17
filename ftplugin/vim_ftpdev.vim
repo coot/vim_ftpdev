@@ -197,7 +197,7 @@ elif what == 'command':
 elif what == 'variable':
     pat = re.compile('\s*let\s')
 elif what == 'maplhs':
-    pat = re.compile('\s*[cilnosvx!]?(?:nore)?(?:m|ma|map)\s' )
+    pat = re.compile('\s*(?:exe(?:c|cu|cut|cute)?\s+["\']\s*)?[cilnosvx!]?(?:nore)?(?:m|ma|map)\s' )
 elif  what == 'maprhs':
     pat = re.compile('\s*[cilnosvx!]?(?:nore)?(?:m|ma|map)' )
 
@@ -262,7 +262,7 @@ vim.command("let loclist=%s" % json.dumps(loclist))
 EOF
 return loclist
 endfun
-fun! Goto(what,bang,...) "{{{1
+fun! Goto(what, bang, ...) "{{{1
     let pattern = (a:0 >= 1 ? 
 		\ (a:1 =~ '.*\ze\s\+\d\+$' ? matchstr(a:1, '.*\ze\s\+\d\+$') : a:1)
 		\ : 'no_arg') 
@@ -275,7 +275,7 @@ fun! Goto(what,bang,...) "{{{1
 	if !has("python")
 	    let pattern		= '^\s*\%(silent!\=\)\=\s*fu\%[nction]!\=\s\+\%(s:\|<\csid>\|\f\+\#\)\=' .  ( a:0 >=  1 ? pattern : '' )
 	else
-	    let cpat		= '^\s*\%(silent!\=\)\=\s*fu\%[nction]!\=\s\+\%(s:\|<\csid>\)\=\zs[^(]*'
+	    let cpat		= '^\s*\%(silent!\=\)\=\s*fu\%[nction]!\=\s\+\zs[^(]*'
 	    let pattern		= ( a:0 >=  1 ? pattern : '' )
 	endif
     elseif a:what == 'command'
@@ -293,10 +293,10 @@ fun! Goto(what,bang,...) "{{{1
 	    let pattern 	= ( a:0 >=  1 ? pattern : '' )
 	endif
     elseif a:what == 'maplhs'
-	let cpat		= '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\?\zs\S*'
+	let cpat		= '[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\?\zs\S*'
 	let pattern		= ( a:0 >= 1 ? pattern : '' )
 	if !has("python")
-	    let pattern		=  '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\?'.pattern
+	    let pattern		=  '[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\?'.pattern
 	endif
     elseif a:what == 'maprhs'
 	let cpat		= '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\s\+\<\S\+\>\s\+\%(<plug>\)\?\zs.*'
@@ -805,15 +805,20 @@ fun! <SID>GlobalDeclaration(word)
     normal! m`
     let line = getline(line("."))
     if line[(col(".")-1):] =~ '^\w\+(' ||
-		\ line[:col(".")] =~ 'call[^(]*$'
+		\ line[:col(".")] =~ '\<call\>[^(]*$'
         let what = 'function'
     elseif line[:col(".")] =~ '^\s*\w*$' ||
 		\ line[:col(".")] =~ 'exe\%[cute]\s*[''"]\s*\w*$'
         let what = 'command'
+    " elseif line[:col(".")] =~ '^\s*\%([nxsvoicl]\?\%(nore\|no\)\?map\|no\|nn\|vn\|xn\|snor\|ono\|ino\|ln\|cno\|unm\|nun\|vu\|xu\|sunm\|unm\|iu\|lu\|cu\)\>' ||
+    elseif expand("<cWORD>") =~ '^<plug>[[:alnum:]]*'
+	let what = 'maplhs'
     else
         let what = 'variable'
     endif
-    call Goto(what, "", a:word)
+    let g:what = what
+    let g:word = a:word
+    call Goto(what, "", '\<'.a:word.'\>')
 endfunc
 catch /E127/
 endtry
