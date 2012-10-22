@@ -804,7 +804,7 @@ try
 fun! <SID>GlobalDeclaration(word)
     normal! m`
     let line = getline(line("."))
-    if line[(col(".")-1):] =~ '^\w\+(' ||
+    if line[(col(".")-1):] =~ '^\%(\w\|#\)\+(' ||
 		\ line[:col(".")] =~ '\<call\>[^(]*$'
         let what = 'function'
     elseif line[:col(".")] =~ '^\s*\w*$' ||
