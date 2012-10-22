@@ -226,9 +226,11 @@ for filename in files:
     while lnr < buf_len:
         lnr += 1
 	line = buf[lnr-1]
-	if line.startswith('py'):
-            # Skip over :python << EOF, :perl << EOF until EOF:
-            eof = re.match('(?:py|pyt|pyth|pytho|python|pe|per|perl)\s*<<\s*(\w+)',line).group(1)
+
+        # Skip over :python << EOF, :perl << EOF, :ruby << EOF and :lua << EOF until EOF:
+	eof_ = re.match('(?:py|pyt|pyth|pytho|python|pe|per|perl|ruby?|lua)\s*<<\s*(\w+)',line)
+	if eof_:
+            eof = eof_.group(1)
             while not line.startswith(eof):
                 lnr +=1
                 if lnr == buf_len:
