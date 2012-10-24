@@ -180,7 +180,6 @@ setl fileformats=unix,dos
 
 " FUNCTIONS AND COMMANDS AND MAPS:
 fun! <SID>PyGrep(what, files) " {{{1
-" XXX:  
 python << EOF
 import vim
 import re
@@ -568,7 +567,7 @@ com! -nargs=? -complete=file PluginDir	:call <SID>PluginDir(<f-args>)
 
 try
 fun! Pgrep(vimgrep_arg) "{{{1
-    let filename	= join(filter(map(split(globpath(b:ftplugin_dir, '**/*'), "\n"), "fnameescape(v:val)"),"!isdirectory(v:val)"))
+    let filename = join(filter(map(split(globpath(b:ftplugin_dir, '**/*'), "\n"), "fnameescape(v:val)"),"!isdirectory(v:val)"))
     try
 	execute "lvimgrep " . a:vimgrep_arg . " " . filename 
     catch /E480:/
@@ -629,78 +628,11 @@ com! -bang ListCommands 	:echo ListCommands(<q-bang>)
 nmap <silent> ]# :call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]*\<\zsendif\>')<CR>
 nmap <silent> [# :call searchpair('^[^"]*\<\zsif\>', '^[^"]*\<\zselse\%(if\)\=\>', '^[^"]*\<\zsendif\>', 'b')<CR>
 
-fun! <SID>Install(bang, ...) "{{{1
-    if !exists("b:ftplugin_dir") || !exists("b:ftplugin_dir")
-	return
-    endif
-    if b:ftplugin_dir == b:ftplugin_installdir || 
-	    \ empty(b:ftplugin_installdir) || 
-	    \ a:bang == "!" && empty(b:ftplugin_dir)
-	return
-    endif
-
-    let silent = ( a:0 >= 1 ? a:1 : 0 )
-
-    exe 'cd '.fnameescape(b:ftplugin_dir)
-    
-    if a:bang == "" 
-	" Note: this returns non zero list if the buffer is loaded
-	" ':h getbufline()'
-	let file = getbufline('%', '1', '$')
-	let file_name = expand('%:.')
-	let install_path = substitute(b:ftplugin_installdir, '\/\s*$', '', '').'/'.file_name
-	try
-	    call writefile(file, install_path)
-	catch /E482/
-	    let dir = fnamemodify(install_path, ':h')
-	    echohl WarningMsg
-	    echom '[ftpdev warning]: making directory "'.dir.'"'
-	    echohl None
-	    call mkdir(dir, 'p')
-	    call writefile(file, install_path)
-	endtry
-	if !silent
-	    echom '[ftpdev]: file installed to: "'.install_path.'".'
-	endif
-    else
-	let install_path = substitute(b:ftplugin_installdir, '\/\s*$', '', '')
-	let file_list = filter(split(globpath(b:ftplugin_dir, '**'), "\n"), "!isdirectory(v:val) && !Match(g:ftplugin_noinstall, fnamemodify(v:val, ':.'))")
-	for file in file_list
-	    if bufloaded(file)
-		let file_list = getbufline(file, '1', '$')
-	    else
-		let file_list = readfile(file)
-	    endif
-	    let file_name = fnamemodify(file, ':.')
-            if !silent
-                echo 'Installing: "'.file_name.'" to "'.install_path.'/'.file_name.'"'
-            endif
-	    try
-		call writefile(file_list, install_path.'/'.file_name)
-	    catch /E482/
-		let dir = fnamemodify(install_path.'/'.file_name, ':h')
-		echohl WarningMsg
-		echom '[ftpdev warning]: making directory "'.dir.'"'
-		echohl None
-		call mkdir(dir, 'p')
-		call writefile(file_list, install_path.'/'.file_name)
-	    endtry
-	endfor
-    endif
-    cd -
-endfun
 " Autoinstall: {{{1
-fun! FTPDEV_AutoInstall()
-    if exists("b:ftplugin_autoinstall") && (
-		\ type(b:ftplugin_autoinstall) == 1 && !empty(b:ftplugin_autoinstall) && b:ftplugin_autoinstall != 'no' ||
-		\ type(b:ftplugin_autoinstall) == 0 && b:ftplugin_autoinstall )
-        call <SID>Install("", ( b:ftplugin_autoinstall =~ 'sil\%[ent]' ? 1 : 0 ))
-    endif
-endfun
 augroup FTPDEV_AutoInstall
     au!
-    au BufWritePost *.vim :call FTPDEV_AutoInstall()
-    " au BufWritePost *.txt :call FTPDEV_AutoInstallDoc()
+    au BufWritePost *.vim :call ftpdev#AutoInstall()
+    " au BufWritePost *.txt :call ftpdev#AutoInstallDoc()
 augroup END
 fun! Match(pattern_list, element) "{{{2
     let match = 0
@@ -712,7 +644,7 @@ fun! Match(pattern_list, element) "{{{2
     endfor
     return match
 endfun "}}}2
-com! -bang Install :call <SID>Install(<q-bang>)
+com! -bang Install :call ftpdev#Install(<q-bang>)
 
 fun! Evaluate(mode) "{{{1
     let saved_pos	= getpos(".")
