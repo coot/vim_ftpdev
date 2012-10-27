@@ -730,7 +730,8 @@ if lnr
 endif
 endfun
 if has("python")
-    nnoremap <silent> <buffer> gd :call <SID>LocalDeclaration(expand("<cword>"))<CR>
+    nnoremap <silent> <buffer> gd :call <sid>LocalDeclaration(expand("<cword>"))<CR>
+    vnoremap <silent> <buffer> gd :<c-u>let ftpdev_yank=@0<bar>exe 'normal! gv"0y'<bar>call <sid>LocalDeclaration(@0)<bar>let @0=ftpdev_yank<CR>
 endif
 " }}}1
 
@@ -756,8 +757,10 @@ try|fun! <SID>GlobalDeclaration(word) " {{{1
 endfunc
 catch /E127/
 endtry
-nnoremap <silent> <buffer> gD :<c-u>call <SID>GlobalDeclaration(expand("<cword>"))<CR>
-vnoremap <silent> <buffer> gD :<c-u>let ftpdev_yank=@0<bar>exe 'normal! gv"0y'<bar>call <sid>GlobalDeclaration(@0)<bar>let @0=ftpdev_yank<CR>
+if has("python")
+    nnoremap <silent> <buffer> gD :<c-u>call <SID>GlobalDeclaration(expand("<cword>"))<CR>
+    vnoremap <silent> <buffer> gD :<c-u>let ftpdev_yank=@0<bar>exe 'normal! gv"0y'<bar>call <sid>GlobalDeclaration(@0)<bar>let @0=ftpdev_yank<CR>
+endif
 " }}}1
 fun! FTPDEV_FunJump(forward, fun, count, ...) "{{{1
     let visual = ( a:0 >= 1 ? a:1 : 0 )
