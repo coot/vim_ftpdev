@@ -1,7 +1,8 @@
 PLUGIN 	= FTPDEV
-VERSION = _6.1
+VERSION = _6.2
 
 SOURCE = ftplugin/vim_ftpdev.vim
+SOURCE += autoload/ftpdev.vim
 SOURCE += doc/ftpdev.txt
 
 ${Plugin}_${VERSION}.vmb: ${SOURCE}

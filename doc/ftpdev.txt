@@ -13,6 +13,19 @@ available commands and maps with some explanation:
 ======
 NEWS							*ftpdev-news*	
 >
+ version 6.2
+<
+ |ftpdev-[f| and |ftpdev-[l| motions, + some fixes of |ftpdev-gD| (works now
+ also in visual mode), and can jump to maps ("<plug>...."). Also |ftpdev-gd|
+ can be used in visual mode.
+
+ There are two autoload functions:
+ ftpdev#Install()
+ ftpdev#AutoInstall()
+ which can be used to install other files than VimL scripts, e.g. doc's or
+ perl, python, ... scripts.
+
+>
  version 6.1
 <
  |b:ftplugin_dir| and |b:ftplugin_installdir| instead of global variables. In
@@ -189,11 +202,13 @@ nmap gD {over-var-name}
 
 							*ftpdev-gd*
 nmap gd
+vmap gd
 	Jump to local definition of a variable under the cursor.
 	It is clever enought to omit nested function scopes.
 
 							*ftpdev-gD*
 nmap gD
+vmap gD
 	Jump to global definition of a variable, function, command or map (if
 	starts with <plug> under the cursor (using |ftpdev-:Variable|,
 	|ftpdev-:Function|, |ftpdev-:Command| or |ftpdef-:MapLhs| commands).
