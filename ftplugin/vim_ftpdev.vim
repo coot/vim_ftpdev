@@ -750,8 +750,8 @@ try|fun! <SID>GlobalDeclaration(word) " {{{1
     else
         let what = 'variable'
     endif
-    let g:what = what
-    let g:word = a:word
+    " let g:what = what
+    " let g:word = a:word
     call Goto(what, "", '\<'.a:word.'\>')
 endfunc
 catch /E127/
