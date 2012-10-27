@@ -738,11 +738,13 @@ try
 fun! <SID>GlobalDeclaration(word)
     normal! m`
     let line = getline(line("."))
-    if line[(col(".")-1):] =~ '^\%(\w\|#\)\+(' ||
+    if line[(col(".")-1):] =~ '^\%(\w\|#\|\.\)\+(' ||
 		\ line[:col(".")] =~ '\<call\>[^(]*$'
         let what = 'function'
     elseif line[:col(".")] =~ '^\s*\w*$' ||
-		\ line[:col(".")] =~ 'exe\%[cute]\s*[''"]\s*\w*$'
+		\ line[:col(".")] =~ ':\w\+$' ||
+		\ line[:col(".")] =~ 'exe\%[cute]\s*[''"]\s*\w*$' ||
+		\ line[:col(".")] =~ 'au\%[tocmd]\s*\w\+\(\s*,\s*\w\+\)*\s*\S\+\s:\?\w\+$'
         let what = 'command'
     " elseif line[:col(".")] =~ '^\s*\%([nxsvoicl]\?\%(nore\|no\)\?map\|no\|nn\|vn\|xn\|snor\|ono\|ino\|ln\|cno\|unm\|nun\|vu\|xu\|sunm\|unm\|iu\|lu\|cu\)\>' ||
     elseif expand("<cWORD>") =~ '^<plug>[[:alnum:]]*'
@@ -756,7 +758,8 @@ fun! <SID>GlobalDeclaration(word)
 endfunc
 catch /E127/
 endtry
-nnoremap <silent> <buffer> gD :call <SID>GlobalDeclaration(expand("<cword>"))<CR>
+nnoremap <silent> <buffer> gD :<c-u>call <SID>GlobalDeclaration(expand("<cword>"))<CR>
+vnoremap <silent> <buffer> gD :<c-u>let ftpdev_yank=@0<bar>exe 'normal! gv"0y'<bar>call <sid>GlobalDeclaration(@0)<bar>let @0=ftpdev_yank<CR>
 " }}}1
 fun! FTPDEV_FunJump(forward, fun, count, ...) "{{{1
     let visual = ( a:0 >= 1 ? a:1 : 0 )
