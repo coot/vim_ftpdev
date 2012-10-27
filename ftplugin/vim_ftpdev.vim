@@ -226,8 +226,8 @@ for filename in files:
         lnr += 1
 	line = buf[lnr-1]
 
-        # Skip over :python << EOF, :perl << EOF, :ruby << EOF and :lua << EOF until EOF:
-	eof_ = re.match('(?:py|pyt|pyth|pytho|python|pe|per|perl|ruby?|lua)\s*<<\s*(\w+)',line)
+        # Skip over :python << EOF, :perl << EOF, :ruby << EOF, :lua << EOF, :mzscheme << EOF, :tcl << EOF until EOF:
+	eof_ = re.match('(?:py|pyt|pyth|pytho|python|pe|per|perl|ruby?|lua|mz|mzs|mzsc|mzsch|mzache|mzscheme|mzscheme|tcl?)\s*<<\s*(\w+)',line)
 	if eof_:
             eof = eof_.group(1)
             while not line.startswith(eof):
