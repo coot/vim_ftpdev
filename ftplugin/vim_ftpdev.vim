@@ -190,7 +190,7 @@ what = vim.eval('a:what')
 files = vim.eval('a:files')
 
 if what == 'function':
-    pat = re.compile('\s*(?:silent!?)?\s*(?:fu|fun|func|funct|functio|function)!?\s')
+    pat = re.compile('(?:\s*try\s*\|)?\s*(?:silent!?)?\s*(?:fu|fun|func|funct|functio|function)!?\s')
 elif what == 'command':
     pat = re.compile('\s*(?:silent!?)?\s*(?:com|comm|comma|comman|command)!?\s')
 elif what == 'variable':
@@ -274,9 +274,9 @@ fun! Goto(what, bang, ...) "{{{1
     let grep_flag = ( a:bang == "!" ? 'j' : '' )
     if a:what == 'function'
 	if !has("python")
-	    let pattern		= '^\s*\%(silent!\=\)\=\s*fu\%[nction]!\=\s\+\%(s:\|<\csid>\|\f\+\#\)\=' .  ( a:0 >=  1 ? pattern : '' )
+	    let pattern		= '^\%(\s*try\s*|\)\?\s*\%(silent!\=\)\=\s*fu\%[nction]!\=\s\+\%(s:\|<\csid>\|\f\+\#\)\=' .  ( a:0 >=  1 ? pattern : '' )
 	else
-	    let cpat		= '^\s*\%(silent!\=\)\=\s*fu\%[nction]!\=\s\+\zs[^(]*'
+	    let cpat		= '^\%(\s*try\s*|\)\?\s*\%(silent!\=\)\=\s*fu\%[nction]!\=\s\+\zs[^(]*'
 	    let pattern		= ( a:0 >=  1 ? pattern : '' )
 	endif
     elseif a:what == 'command'
@@ -733,9 +733,8 @@ if has("python")
     nnoremap <silent> <buffer> gd :call <SID>LocalDeclaration(expand("<cword>"))<CR>
 endif
 " }}}1
-" Global Declaration {{{1
-try
-fun! <SID>GlobalDeclaration(word)
+
+try|fun! <SID>GlobalDeclaration(word) " {{{1
     normal! m`
     let line = getline(line("."))
     if line[(col(".")-1):] =~ '^\%(\w\|#\|\.\)\+(' ||
@@ -746,7 +745,6 @@ fun! <SID>GlobalDeclaration(word)
 		\ line[:col(".")] =~ 'exe\%[cute]\s*[''"]\s*\w*$' ||
 		\ line[:col(".")] =~ 'au\%[tocmd]\s*\w\+\(\s*,\s*\w\+\)*\s*\S\+\s:\?\w\+$'
         let what = 'command'
-    " elseif line[:col(".")] =~ '^\s*\%([nxsvoicl]\?\%(nore\|no\)\?map\|no\|nn\|vn\|xn\|snor\|ono\|ino\|ln\|cno\|unm\|nun\|vu\|xu\|sunm\|unm\|iu\|lu\|cu\)\>' ||
     elseif expand("<cWORD>") =~ '^<plug>[[:alnum:]]*'
 	let what = 'maplhs'
     else
