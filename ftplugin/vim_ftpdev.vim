@@ -9,9 +9,12 @@
 " Todo: [count]]f go to line [count] of the current function (useful when
 " debuging functions).
 
-if (expand("%:t") == ".vimrc" || expand("%:t") == "_vimrc")
+if exists("b:did_FTPDEV") || (expand("%:t") == ".vimrc" || expand("%:t") == "_vimrc")
     finish
 endif
+let b:did_FTPDEV = 1
+" We are not useing b:did_ftplugin, since we still want to load the default
+" vim.vim Bram's plugin. It has good settings for writing VimL code.
 
 "{{{1 VARIABLES
 " script variables {{{2
@@ -276,7 +279,7 @@ fun! Goto(what, bang, ...) "{{{1
 	if !has("python")
 	    let pattern		= '^\%(\s*try\s*|\)\?\s*\%(silent!\=\)\=\s*fu\%[nction]!\=\s\+\%(s:\|<\csid>\|\f\+\#\)\=' .  ( a:0 >=  1 ? pattern : '' )
 	else
-	    let cpat		= '^\%(\s*try\s*|\)\?\s*\%(silent!\=\)\=\s*fu\%[nction]!\=\s\+\zs[^(]*'
+	    let cpat		= '^\%(\s*try\s*|\)\?\s*\%(silent!\=\)\=\s*fu\%[nction]!\=\s\+\c\%(s:\|<sid>\)\?\C\zs[^(]*'
 	    let pattern		= ( a:0 >=  1 ? pattern : '' )
 	endif
     elseif a:what == 'command'
@@ -324,6 +327,8 @@ fun! Goto(what, bang, ...) "{{{1
 	    call add(nloclist, loc)
 	endfor
         let loclist = nloclist
+	let g:loclist = copy(loclist)
+	let g:pattern = pattern
         call filter(loclist, 'v:val["m_text"] =~ pattern')
         call setloclist(0, loclist)
         try
@@ -486,9 +491,9 @@ fun! SearchInFunction(pattern, flag) "{{{1
 	let end = searchpairpos('^\s*fun\%[ction]\>', '', '^\s*endfun\%[ction]\>', 'Wn')
     endif
     if a:flag !~# 'b'
-	let pos = searchpos('\(' . a:pattern . ( a:pattern =~ '\\v' ? '|^\s*endfun%[ction]>)' : '\|^\s*endfun\%[ction]\>\)' ), 'W')
+	let pos = searchpos('\(' . a:pattern . ( a:pattern =~ '\\v' ? '|^\s*endf%[unction]>)' : '\|^\s*endf\%[unction]\>\)' ), 'W')
     else
-	let pos = searchpos('\(' . a:pattern . ( a:pattern =~ '\\v' ? '|^\s*endfun%[ction]>)' : '\|^\s*endfun\%[ction]\>\)' ), 'Wb')
+	let pos = searchpos('\(' . a:pattern . ( a:pattern =~ '\\v' ? '|^\s*fu%[nction]>)' : '\|^\s*fu\%[nction]\>\)' ), 'Wb')
     endif
 
     let msg="" 
@@ -496,12 +501,12 @@ fun! SearchInFunction(pattern, flag) "{{{1
 	if a:flag !~# 'b' && pos == end
 	    let msg="search hit BOTTOM, continuing at TOP"
 	    call cursor(begin)
-	    call search('^\s*fun\%[ction]\zs', '')
-	    let pos = searchpos('\(' . a:pattern . ( a:pattern =~ '\\v' ? '|^\s*endfun%[ction]>)' : '\|^\s*endfun\%[ction]\>\)' ), 'W')
+	    call search('^\s*fu\%[nction]\zs', '')
+	    let pos = searchpos('\(' . a:pattern . ( a:pattern =~ '\\v' ? '|^\s*endf%[unction]>)' : '\|^\s*endf\%[unction]\>\)' ), 'W')
 	elseif a:flag =~# 'b' && pos == begin 
 	    let msg="search hit TOP, continuing at BOTTOM"
 	    call cursor(end)
-	    let pos = searchpos('\(' . a:pattern . ( a:pattern =~ '\\v' ? '|^\s*endfun%[ction]>)' : '\|^\s*endfun\%[ction]\>\)' ), 'Wb')
+	    let pos = searchpos('\(' . a:pattern . ( a:pattern =~ '\\v' ? '|^\s*fu%[nction]>)' : '\|^\s*fu\%[nction]\>\)' ), 'Wb')
 	endif
 	if pos == end || pos == begin
 	    let msg="Pattern: " . a:pattern . " not found." 
@@ -737,23 +742,26 @@ endif
 
 try|fun! <SID>GlobalDeclaration(word) " {{{1
     normal! m`
+    let word = a:word
     let line = getline(line("."))
     if line[(col(".")-1):] =~ '^\%(\w\|#\|\.\)\+(' ||
 		\ line[:col(".")] =~ '\<call\>[^(]*$'
         let what = 'function'
-    elseif line[:col(".")] =~ '^\s*\w*$' ||
+	let word = matchstr(word, '\(<sid>\|s:\)\?\zs.*')
+    elseif (line[:col(".")] =~ '^\s*\w*$' ||
 		\ line[:col(".")] =~ ':\w\+$' ||
 		\ line[:col(".")] =~ 'exe\%[cute]\s*[''"]\s*\w*$' ||
-		\ line[:col(".")] =~ 'au\%[tocmd]\s*\w\+\(\s*,\s*\w\+\)*\s*\S\+\s:\?\w\+$'
+		\ line[:col(".")] =~ 'au\%[tocmd]\s*\w\+\(\s*,\s*\w\+\)*\s*\S\+\s:\?\w\+$' ) &&
+		\ line[:col(".")] !~ '^\s*let\>'
         let what = 'command'
     elseif expand("<cWORD>") =~ '^<plug>[[:alnum:]]*'
 	let what = 'maplhs'
     else
         let what = 'variable'
     endif
-    " let g:what = what
-    " let g:word = a:word
-    call Goto(what, "", '\<'.a:word.'\>')
+    let g:what = what
+    let g:word = a:word
+    call Goto(what, "", '\<'.word.'\>')
 endfunc
 catch /E127/
 endtry
