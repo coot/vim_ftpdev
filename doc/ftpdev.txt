@@ -1,4 +1,4 @@
-*ftpdev.txt* 			For Vim version 7	Last change: 27 IX 2012
+*ftpdev.txt*	file type plugin for VimL	    Last change: 27 October 2012
 
 
 		    A help file for {F}ile {T}ype {P}lugin {DEV}elopemnt  (ver. 5.6)
