@@ -327,8 +327,6 @@ fun! Goto(what, bang, ...) "{{{1
 	    call add(nloclist, loc)
 	endfor
         let loclist = nloclist
-	let g:loclist = copy(loclist)
-	let g:pattern = pattern
         call filter(loclist, 'v:val["m_text"] =~ pattern')
         call setloclist(0, loclist)
         try
@@ -759,8 +757,8 @@ try|fun! <SID>GlobalDeclaration(word) " {{{1
     else
         let what = 'variable'
     endif
-    let g:what = what
-    let g:word = a:word
+    " let g:what = what
+    " let g:word = a:word
     call Goto(what, "", '\<'.word.'\>')
 endfunc
 catch /E127/
