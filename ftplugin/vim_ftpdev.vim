@@ -9,7 +9,7 @@
 " Todo: [count]]f go to line [count] of the current function (useful when
 " debuging functions).
 
-if exists("b:did_FTPDEV") || (expand("%:t") == ".vimrc" || expand("%:t") == "_vimrc")
+if exists("b:did_FTPDEV")
     finish
 endif
 let b:did_FTPDEV = 1
@@ -175,6 +175,12 @@ else
     endif
 endif
 try
+" SetDir {{{2
+fun! <sid>SetDir(dir,var)
+    let {a:var}=a:dir
+endfun
+com! -complete=dir -nargs=1 FTSetPluginDir :call <sid>SetDir(<q-args>, 'b:ftplugin_dir')
+com! -complete=dir -nargs=1 FTSetInstallDir :call <sid>SetDir(<q-args>, 'b:ftplugin_installdir')
 "}}}1
 
 " Vim Settings: 
@@ -568,8 +574,7 @@ fun! <SID>PluginDir(...) "{{{1
 endfun "}}}1
 com! -nargs=? -complete=file PluginDir	:call <SID>PluginDir(<f-args>)
 
-try
-fun! Pgrep(vimgrep_arg) "{{{1
+try|fun! Pgrep(vimgrep_arg) "{{{1
     let filename = join(filter(map(split(globpath(b:ftplugin_dir, '**/*'), "\n"), "fnameescape(v:val)"),"!isdirectory(v:val)"))
     try
 	execute "lvimgrep " . a:vimgrep_arg . " " . filename 
@@ -736,8 +741,6 @@ if has("python")
     nnoremap <silent> <buffer> gd :call <sid>LocalDeclaration(expand("<cword>"))<CR>
     vnoremap <silent> <buffer> gd :<c-u>let ftpdev_yank=@0<bar>exe 'normal! gv"0y'<bar>call <sid>LocalDeclaration(@0)<bar>let @0=ftpdev_yank<CR>
 endif
-" }}}1
-
 try|fun! <SID>GlobalDeclaration(word) " {{{1
     normal! m`
     let word = a:word
