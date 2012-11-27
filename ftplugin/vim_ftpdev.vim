@@ -785,7 +785,7 @@ fun! FTPDEV_FunJump(forward, fun, count, ...) "{{{1
     if a:fun
 	let pat = '\(^\||\)\s*\zsfu\%[nction]\>'
     else
-	let pat = '\s*\zsend\%[function]\>'
+	let pat = '\s*\zsendf\%[unction]\>'
     endif
     for i in range(a:count)
 	call search(pat, flag)
