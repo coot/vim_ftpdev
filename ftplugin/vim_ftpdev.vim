@@ -207,7 +207,7 @@ elif what == 'variable':
 elif what == 'maplhs':
     pat = re.compile('\s*(?:exe(?:c|cu|cut|cute)?\s+["\']\s*)?[cilnosvx!]?(?:nore)?(?:m|ma|map)\s' )
 elif  what == 'maprhs':
-    pat = re.compile('\s*[cilnosvx!]?(?:nore)?(?:m|ma|map)' )
+    pat = re.compile('\s*[cilnosvx]?(?:nore)?(?:m|ma|map)\s')
 
 loclist = []
 for filename in files:
@@ -309,10 +309,10 @@ fun! Goto(what, bang, ...) "{{{1
 	    let pattern		=  '[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\(<plug>\)\?'.pattern
 	endif
     elseif a:what == 'maprhs'
-	let cpat		= '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\s\+\<\S\+\>\s\+\%(<plug>\)\?\zs.*'
+	let cpat		= '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\s\+\S\+\s\+\%(<plug>\)\?\zs.*'
 	let pattern		= ( a:0 >= 1 ? pattern : '' )
 	if !has("python")
-	    let pattern		=  '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\s\+\<\S\+\>\s\+\%(<plug>\)\?'.pattern
+	    let pattern		=  '^\s*[cilnosvx!]\?\%(nore\)\?m\%[ap]\>\s\+\%(\%(<buffer>\|<silent>\|<unique>\|<expr>\)\s*\)*\s\+\S\+\s\+\%(<plug>\)\?'.pattern
 	endif
     else
 	let pattern 		= '^\s*[ci]\=\%(\%(nore\|un\)a\%[bbrev]\|ab\%[breviate]\)' . ( a:0 >= 1 ? pattern : '' )
@@ -783,9 +783,9 @@ fun! FTPDEV_FunJump(forward, fun, count, ...) "{{{1
 	let flag = 'bW'
     endif
     if a:fun
-	let pat = '^\s*\zsfu\%[nction]\>'
+	let pat = '\(^\||\)\s*\zsfu\%[nction]\>'
     else
-	let pat = '^\s*\zsend\%[function]\>'
+	let pat = '\s*\zsend\%[function]\>'
     endif
     for i in range(a:count)
 	call search(pat, flag)
