@@ -245,7 +245,7 @@ map [#
 	argument syntax is the same as for |lvimgrep|.
 
 							*ftpdev-]]* *ftpdev-[[*
-							*ftpdev-][* *ftpdev-][*
+							*ftpdev-][* *ftpdev-[]*
 These are normal and visual maps:
 [count]]] 	next beginning of a function, 
 [count]][ 	next end of a function, 
