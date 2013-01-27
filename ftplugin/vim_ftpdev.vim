@@ -746,7 +746,8 @@ try|fun! <SID>GlobalDeclaration(word) " {{{1
     let word = a:word
     let line = getline(line("."))
     if line[(col(".")-1):] =~ '^\%(\w\|#\|\.\)\+(' ||
-		\ line[:col(".")] =~ '\<call\>[^(]*$'
+		\ line[:col(".")] =~ '\<call\>[^(]*$' ||
+		\ line[:col(".")] =~ '\s-complete=custom\(list\)\?,\S*$'
         let what = 'function'
 	let word = matchstr(word, '\(<sid>\|s:\)\?\zs.*')
     elseif (line[:col(".")] =~ '^\s*\w*$' ||
@@ -760,8 +761,8 @@ try|fun! <SID>GlobalDeclaration(word) " {{{1
     else
         let what = 'variable'
     endif
-    " let g:what = what
-    " let g:word = a:word
+    let g:what = what
+    let g:word = a:word
     call Goto(what, "", '\<'.word.'\>')
 endfunc
 catch /E127/
