@@ -40,7 +40,7 @@ if !exists("b:ftplugin_dir")
 	if !exists("b:ftplugin_installdir")
 	    let b:ftplugin_installdir = ''
 	endif
-    elseif expand("%:p:h:h") == '/' || expand("%:p:h:h") == $HOME
+    elseif expand("%:p:h:h") == '/' || expand("%:p:h:h") == $HOME || expand('%:t') =~ '\(\.\|_\)vimrc$'
 	let b:ftplugin_dir = ''
 	if !exists("b:ftplugin_installdir")
 	    let b:ftplugin_installdir = ''
